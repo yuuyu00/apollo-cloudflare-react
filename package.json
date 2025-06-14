@@ -1,0 +1,34 @@
+{
+  "name": "apollo-cloudflare-react",
+  "version": "1.0.0",
+  "license": "MIT",
+  "private": true,
+  "volta": {
+    "node": "22.11.0"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "generate": "turbo generate",
+    "lint": "turbo lint",
+    "type-check": "turbo type-check",
+    "test": "turbo test",
+    "format": "turbo format",
+    "prisma-migrate": "turbo prisma-migrate",
+    "prisma-deploy": "turbo prisma-deploy",
+    "bootstrap": "turbo prisma-deploy && pnpm generate && pnpm insert-seed",
+    "clean": "turbo clean && rm -rf node_modules .turbo"
+  },
+  "devDependencies": {
+    "eslint": "^9.29.0",
+    "turbo": "^2.5.4",
+    "zod": "^3.25.64"
+  },
+  "resolutions": {
+    "expo-asset": "8.9.1"
+  },
+  "packageManager": "pnpm@8.14.0",
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
