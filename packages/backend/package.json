@@ -11,7 +11,6 @@
     "clean": "rm -rf dist",
     "build": "pnpm run clean && pnpm run generate && tsc",
     "generate": "pnpm run generate:prisma && pnpm run generate:codegen && pnpm run generate:schema",
-    "generate:ci": "pnpm run generate:codegen && pnpm run generate:schema",
     "generate:prisma": "prisma generate",
     "generate:codegen": "pnpm run generate:codegen:prepare && pnpm run generate:codegen:concat && pnpm run generate:codegen:dts",
     "generate:codegen:prepare": "rimraf schema/schema.gql",

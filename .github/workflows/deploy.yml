@@ -25,7 +25,9 @@ jobs:
         run: pnpm install
       
       - name: Generate Backend GraphQL Schema
-        run: pnpm --filter @apollo-cloudflare-react/backend generate:ci
+        env:
+          DATABASE_URL: "file:./dev.db"
+        run: pnpm --filter @apollo-cloudflare-react/backend generate
       
       - name: Deploy Backend to Cloudflare Workers
         env:
