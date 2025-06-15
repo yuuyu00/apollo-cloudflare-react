@@ -1,8 +1,8 @@
 -- Add sub column to User table for Supabase Auth user ID
 -- This migration needs to handle foreign key constraints properly
+-- Note: D1 doesn't support BEGIN TRANSACTION, so operations are atomic by default
 
 PRAGMA foreign_keys=off;
-BEGIN TRANSACTION;
 
 -- 1. Save existing data from all tables
 CREATE TABLE User_temp AS SELECT * FROM User;
@@ -76,5 +76,4 @@ DROP TABLE Article_temp;
 DROP TABLE Category_temp;
 DROP TABLE _ArticleToCategory_temp;
 
-COMMIT;
 PRAGMA foreign_keys=on;
