@@ -210,7 +210,7 @@ cd packages/backend
 pnpm dev  # または pnpm wrangler dev
 
 # デプロイ（開発環境）
-pnpm deploy  # または pnpm wrangler deploy
+pnpm deploy:dev  # または pnpm wrangler deploy
 
 # デプロイ（本番環境）
 pnpm deploy:prod  # または pnpm wrangler deploy --env production
@@ -324,7 +324,7 @@ pnpm generate
 3. **デプロイ**
    - `pnpm build`でビルド確認
    - `pnpm type-check`で型チェック
-   - Backend: `pnpm deploy`（開発）または`pnpm deploy:prod`（本番）
+   - Backend: `pnpm deploy:dev`（開発）または`pnpm deploy:prod`（本番）
    - Frontend: `pnpm deploy:dev`（開発）または`pnpm deploy:prod`（本番）
 
 ## 注意事項

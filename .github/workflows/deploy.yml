@@ -34,7 +34,7 @@ jobs:
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             pnpm --filter @apollo-cloudflare-react/backend deploy:prod
           else
-            pnpm --filter @apollo-cloudflare-react/backend deploy
+            pnpm --filter @apollo-cloudflare-react/backend deploy:dev
           fi
 
   deploy-frontend:
