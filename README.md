@@ -1,95 +1,290 @@
-# GraphQL勉強会リポジトリ
+# Apollo Cloudflare React Stack
 
-## セットアップ手順
+Cloudflare Workers上のApollo Server、React、Supabase Authで構築されたモダンなフルスタックアプリケーション
 
-pnpmが必要なのでインストールしてない方は恐縮ですがインストールお願いします！
-https://pnpm.io/installation
+## 🚀 概要
 
-pnpmをインストールしたら
+このプロジェクトは、以下の技術を使用した本番環境対応のアーキテクチャを実装しています：
 
-- `pnpm install`
-- `pnpm bootstrap`
-- `pnpm dev`
+- **バックエンド**: Cloudflare Workers上で動作するApollo GraphQL ServerとD1データベース
+- **フロントエンド**: Cloudflare Workers Static Assetsとしてデプロイされた React SPA
+- **認証**: JWT検証を使用したSupabase Auth
+- **インフラ**: Cloudflareのエッジネットワーク上で完全サーバーレス
 
-localhost:9000 にGraphQL APIのPlayground
-localhost:3000 にReactアプリが開かれます
+## 🏗️ アーキテクチャ
 
-## GraphQLとは
+```
+クライアントブラウザ
+    │
+    ├─── React SPA (Cloudflare Workers Static Assets)
+    │     ・Apollo Client (GraphQL)
+    │     ・Supabase Auth Client
+    │     ・React Router (SPAルーティング)
+    │
+    │ GraphQLリクエスト (JWT付きヘッダー)
+    ▼
+Apollo Server (Cloudflare Workers)
+    │
+    ├─── GraphQLスキーマ & リゾルバー
+    ├─── Supabase JWT検証
+    └─── Prisma ORM (D1 Adapter)
+    │
+    │ SQLクエリ
+    ▼
+Cloudflare D1 (SQLite)
+    ・ユーザーデータ
+    ・記事コンテンツ
+    ・カテゴリ管理
 
-https://graphql.org/
+外部サービス:
+    Supabase Auth
+    ・ユーザー登録/ログイン
+    ・JWTトークン生成
+    ・OAuthプロバイダーサポート
+```
 
-- API用のクエリ言語
-- あくまでGraphQLは「仕様」であり、個別の実装は各プラットフォームに任される
+## 🛠️ 技術スタック
 
-### 特徴
+### バックエンド
 
-- GraphQLは、フロントエンドとバックエンドの間に立って双方の「約束」を決める
-- その約束を定義するものが「スキーマ」というもの
-- 欲しいデータをJSONのように書いて、引数はvariablesに渡すだけ
-- REST APIにおける `GET` に相当するものは `Query` と呼ばれる
-- REST APIにおける `POST` `PUT` `DELETE` に相当するものは `Mutation` と呼ばれる
+- **ランタイム**: Cloudflare Workers (エッジコンピューティング)
+- **API**: GraphQLを使用したApollo Server
+- **データベース**: Cloudflare D1 (エッジで動作するSQLite)
+- **ORM**: D1 Adapterを使用したPrisma
+- **認証**: Supabase JWT検証
 
-## なにが嬉しいのか
+### フロントエンド
 
-### パス設計・レスポンス設計が不要
+- **フレームワーク**: TypeScriptを使用したReact 18
+- **ビルドツール**: Vite
+- **スタイリング**: Tailwind CSS
+- **GraphQLクライアント**: Apollo Client
+- **ルーティング**: React Router
+- **デプロイ**: Cloudflare Workers Static Assets
 
-基本的にテーブル定義をそのままスキーマに書き写して各カラムを自由に取得できるように実装するだけなので、パス設計もレスポンス設計も不要になる。
-コードベースが拡大するにつれて歪になっていくパス設計や、フロントエンド側の都合に応じて微調整しながら実質的に重複していくレスポンス設計に頭を悩ませる必要がなくなる。
+### 開発ツール
 
-### 型安全性が高い
+- **モノレポ**: pnpm workspaces + Turborepo
+- **コード生成**: GraphQL Code Generator
+- **型安全性**: エンドツーエンドのTypeScript
+- **CI/CD**: GitHub Actions
 
-APIの仕様は全てスキーマに書いてあり、実装はそのスキーマの内容を守る実装をしなければならないので、スキーマだけ見れば確実にAPIの形がわかる。
-スキーマからTSの型を生成して利用するツールチェインも豊富で、しっかりスキーマから生成された型を利用している以上、バックエンドの実装ミス以外は「叩いてみたら想定と違うレスポンスが返ってきた」みたいなことが一切なくなる。
+## 📁 プロジェクト構成
 
-### APIインターフェースが中立になる
+```
+apollo-cloudflare-react/
+├── packages/
+│   ├── backend/                 # Cloudflare Workers上のApollo Server
+│   │   ├── src/
+│   │   │   ├── index.ts        # Workersエントリーポイント
+│   │   │   ├── resolvers/      # GraphQLリゾルバー
+│   │   │   ├── db.ts          # Prismaクライアント設定
+│   │   │   └── auth.ts        # JWT検証
+│   │   ├── schema/            # GraphQLスキーマファイル (.gql)
+│   │   ├── prisma/            # データベーススキーマ
+│   │   ├── migrations/        # D1マイグレーション
+│   │   └── wrangler.toml      # Cloudflare Workers設定
+│   │
+│   └── frontend/              # React SPA
+│       ├── src/
+│       │   ├── components/    # Reactコンポーネント
+│       │   ├── screens/       # ページコンポーネント
+│       │   ├── graphql/       # GraphQLクエリ/ミューテーション
+│       │   └── generated-graphql/ # 自動生成された型
+│       ├── wrangler.toml      # Static Assets設定
+│       └── .env.development   # 開発環境設定
+│
+├── .github/
+│   └── workflows/
+│       └── deploy.yml         # CI/CDパイプライン
+├── turbo.json                 # Turborepo設定
+├── pnpm-workspace.yaml        # pnpmワークスペース設定
+└── README.md                  # このファイル
+```
 
-フロントエンドに寄せすぎてバックエンドが苦しむ必要がなくなる。逆も然り。
-お互いにインターフェースを話し合って合意してから実装するみたいなことをする必要もなくなって、スキーマだけ先に決めたらAPIの実装を待たずにフロントエンドの実装を進めることができる。
+## 🚀 はじめに
 
-### リッチなドキュメントとPlaygroundが最初から用意されている
+### 前提条件
 
-Apollo Serverを利用する場合、普通に起動するだけで高機能なPlaygroundとドキュメントがすぐに利用可能になる。
-補完がばっちり効くので、postmanでちまちまやるより生産性も開発体験も圧倒的に良い
+- Node.js v22.11.0 (LTS)
+- pnpm v9以上
+- Cloudflareアカウント
+- Supabaseアカウント
 
-### 不要なネットワークリクエスト削減
+### 初期セットアップ
 
-必要なデータだけ絞って取得できるので、API側の都合で不要なデータまで一緒に取ってくる、みたいな状況を防ぐことがフロントエンドだけの裁量でできる。
+1. **リポジトリのクローン**
 
-### 複数のAPIを1回のネットワークリクエストで叩ける
+   ```bash
+   git clone <repository-url>
+   cd apollo-cloudflare-react
+   ```
 
-query/mutationは1回のリクエストにいくらでも詰め込めるので、1画面でいくつかのデータを取得する必要がある場合に何個もリクエストを飛ばす必要がなくなる
+2. **依存関係のインストール**
 
-## 欠点
+   ```bash
+   pnpm install
+   ```
 
-### 超高速プロトタイプ開発には向かない（かもしれない）
+3. **環境変数の設定**
 
-実装者の習熟度によってはREST APIの方が実装速度が早い可能性がある。
+   バックエンド (`packages/backend/.dev.vars`):
 
-### 学習コストが高い
+   ```
+   SUPABASE_URL=your-supabase-url
+   SUPABASE_ANON_KEY=your-supabase-anon-key
+   SUPABASE_JWT_SECRET=your-supabase-jwt-secret
+   GRAPHQL_INTROSPECTION=true
+   CORS_ORIGIN=http://localhost:3000
+   ```
 
-扱える人が少ないので、採用/アサインの観点で困る可能性が高い
+   バックエンド (`packages/backend/.env`):
 
-### エンドポイント単位でのパフォーマンス計測ができない
+   ```
+   DATABASE_URL="file:./dev.db"
+   ```
 
-使い慣れたパフォーマンス計測ツールがあったとしても、GraphQLではエンドポイントが一つなので利用できない。
-ただし、Apollo Server含め多くのGraphQLライブラリにはパフォーマンス計測ツールがある。
+   フロントエンドの環境ファイルはリポジトリに含まれています。
 
-### レート制限が困難な可能性がある
+4. **Cloudflare D1データベースの作成**
 
-レスポンスのデータ量はクエリの内容に応じて変わるので、REST APIのように時間単位でいくらのリクエスト、というような制限は意味が薄くなる。
-一応、queryでネスト可能な階層を制限するなどの対策はあるにはある。
+   ```bash
+   cd packages/backend
+   pnpm wrangler d1 create apollo-cloudflare-db
+   ```
 
-## ReactでQueryを書いてみよう
+   作成されたIDで`wrangler.toml`の`database_id`を更新してください。
 
-### Providerについて
+5. **データベースマイグレーションの適用**
 
-Apollo Clientを使用するためにProviderを書く必要がある。
-App.tsxに書かれている。
+   ```bash
+   # ローカル環境
+   pnpm d1:migrations:apply
 
-### 投稿を取得してみる
+   # リモート環境
+   pnpm d1:migrations:apply:remote
+   ```
 
-1. localhost:9000 にアクセスして、Playgroundを開く。
-2. `articles` Queryを叩いてみる
-3. 実行してみて、無事にデータを取得できたら `src/graphql/article.ts` にQueryの内容を書き写す。
-4. ArticleList コンポーネントにて `useQuery` を使って、 `src/graphql/article.ts` に書いたクエリを呼んでみる
-5. レスポンスが型つきで返ってくるので、コンポーネントの中で表示してみる
+6. **コード生成**
+   ```bash
+   # プロジェクトルートから
+   pnpm generate
+   ```
+
+## 💻 開発
+
+### 開発サーバーの起動
+
+```bash
+# バックエンドとフロントエンドの両方を起動
+pnpm dev
+
+# バックエンドのみ (http://localhost:8787)
+cd packages/backend && pnpm dev
+
+# フロントエンドのみ (http://localhost:3000)
+cd packages/frontend && pnpm dev
+```
+
+### 開発ワークフロー
+
+1. **GraphQLスキーマの変更**
+
+   - `packages/backend/schema/`内の`.gql`ファイルを編集
+   - `pnpm generate`を実行して型を更新
+   - `packages/backend/src/resolvers/`でリゾルバーを実装
+
+2. **データベーススキーマの変更**
+
+   - `packages/backend/prisma/schema.prisma`を更新
+   - マイグレーション作成: `pnpm d1:migrations:create <name>`
+   - ローカルに適用: `pnpm d1:migrations:apply`
+   - Prismaクライアント生成: `pnpm prisma generate`
+
+3. **フロントエンド開発**
+   - `packages/frontend/src/graphql/`でGraphQLクエリを記述
+   - `pnpm generate`を実行して型付きフックを作成
+   - Reactコンポーネントで生成されたフックを使用
+
+### コード品質
+
+```bash
+# 型チェック
+pnpm type-check
+
+# リンティング
+pnpm lint
+
+# コードフォーマット
+pnpm format
+
+# 全てのチェックを実行
+pnpm build
+```
+
+## 🚀 デプロイ
+
+### 手動デプロイ
+
+```bash
+# バックエンドのデプロイ
+cd packages/backend
+pnpm deploy:dev    # 開発環境
+pnpm deploy:prod   # 本番環境
+
+# フロントエンドのデプロイ
+cd packages/frontend
+pnpm deploy:dev    # 開発環境
+pnpm deploy:prod   # 本番環境
+```
+
+### 自動デプロイ (GitHub Actions)
+
+プロジェクトには自動CI/CDが含まれています：
+
+- `develop`ブランチへのプッシュ → 開発環境へデプロイ
+- `main`ブランチへのプッシュ → 本番環境へデプロイ
+
+必要なGitHub Secrets:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+## 📚 主な機能
+
+### ゼロコストの静的ホスティング
+
+フロントエンドの静的アセットはWorkerの起動なしにCloudflareのエッジネットワークから直接配信され、ホスティングは完全無料です。
+
+### エッジコンピューティング
+
+APIとデータベースの両方がCloudflareのエッジロケーションで実行され、グローバルに低遅延を実現します。
+
+### 型安全性
+
+PrismaとGraphQL Code Generatorにより、データベーススキーマからReactコンポーネントまでエンドツーエンドの型安全性を実現。
+
+### モダンな開発体験
+
+- 開発時のホットリロード
+- 自動コード生成
+- 共有依存関係を持つモノレポ
+- 統合されたテストとリンティング
+
+## ⚡ パフォーマンス
+
+- **グローバルCDN**: 300以上のエッジロケーションで静的アセットをキャッシュ
+- **エッジコンピューティング**: APIがユーザーの近くで実行
+- **最適化されたバンドル**: コード分割と遅延読み込み
+- **コールドスタートなし**: Workersはエッジで常に温かい状態
+
+## 📈 スケーラビリティ
+
+- **サーバーレス**: サーバー管理不要で自動スケーリング
+- **エッジデータベース**: D1が一貫したパフォーマンスを提供
+- **静的アセット**: フロントエンドの無制限スケーリング
+- **従量課金**: 実際の使用量に応じたコスト
+
+## 🐛 トラブルシューティング
+
+一般的な問題と解決方法については[CLAUDE.md](./CLAUDE.md#トラブルシューティング)を参照してください。
