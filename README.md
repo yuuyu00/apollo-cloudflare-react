@@ -1,17 +1,17 @@
 # Apollo Cloudflare React Stack
 
-Cloudflare Workers上のApollo Server、React、Supabase Authで構築されたモダンなフルスタックアプリケーション
+Cloudflare Workers上で動作するApollo Server、React、Supabase Authを統合したフルスタックアプリケーション
 
-## 🚀 概要
+## 概要
 
-このプロジェクトは、以下の技術を使用した本番環境対応のアーキテクチャを実装しています：
+このプロジェクトは以下の技術を使用した本番環境対応のアーキテクチャを実装しています。
 
 - **バックエンド**: Cloudflare Workers上で動作するApollo GraphQL ServerとD1データベース
 - **フロントエンド**: Cloudflare Workers Static Assetsとしてデプロイされた React SPA
-- **認証**: JWT検証を使用したSupabase Auth
+- **認証**: JWT検証によるSupabase Auth
 - **インフラ**: Cloudflareのエッジネットワーク上で完全サーバーレス
 
-## 🏗️ アーキテクチャ
+## アーキテクチャ
 
 ```
 クライアントブラウザ
@@ -43,19 +43,19 @@ Cloudflare D1 (SQLite)
     ・OAuthプロバイダーサポート
 ```
 
-## 🛠️ 技術スタック
+## 技術スタック
 
 ### バックエンド
 
 - **ランタイム**: Cloudflare Workers (エッジコンピューティング)
-- **API**: GraphQLを使用したApollo Server
+- **API**: Apollo ServerによるGraphQL
 - **データベース**: Cloudflare D1 (エッジで動作するSQLite)
-- **ORM**: D1 Adapterを使用したPrisma
+- **ORM**: Prisma (D1 Adapter使用)
 - **認証**: Supabase JWT検証
 
 ### フロントエンド
 
-- **フレームワーク**: TypeScriptを使用したReact 18
+- **フレームワーク**: React 18 (TypeScript)
 - **ビルドツール**: Vite
 - **スタイリング**: Tailwind CSS
 - **GraphQLクライアント**: Apollo Client
@@ -64,12 +64,13 @@ Cloudflare D1 (SQLite)
 
 ### 開発ツール
 
-- **モノレポ**: pnpm workspaces + Turborepo
+- **モノレポ管理**: Turborepo + pnpm workspaces
+- **パッケージマネージャー**: pnpm
 - **コード生成**: GraphQL Code Generator
 - **型安全性**: エンドツーエンドのTypeScript
 - **CI/CD**: GitHub Actions
 
-## 📁 プロジェクト構成
+## プロジェクト構成
 
 ```
 apollo-cloudflare-react/
@@ -102,7 +103,7 @@ apollo-cloudflare-react/
 └── README.md                  # このファイル
 ```
 
-## 🚀 はじめに
+## セットアップ
 
 ### 前提条件
 
@@ -111,7 +112,7 @@ apollo-cloudflare-react/
 - Cloudflareアカウント
 - Supabaseアカウント
 
-### 初期セットアップ
+### 初期設定
 
 1. **リポジトリのクローン**
 
@@ -171,7 +172,7 @@ apollo-cloudflare-react/
    pnpm generate
    ```
 
-## 💻 開発
+## 開発
 
 ### 開発サーバーの起動
 
@@ -206,7 +207,7 @@ cd packages/frontend && pnpm dev
    - `pnpm generate`を実行して型付きフックを作成
    - Reactコンポーネントで生成されたフックを使用
 
-### コード品質
+### コード品質チェック
 
 ```bash
 # 型チェック
@@ -218,11 +219,11 @@ pnpm lint
 # コードフォーマット
 pnpm format
 
-# 全てのチェックを実行
+# ビルド（全チェックを含む）
 pnpm build
 ```
 
-## 🚀 デプロイ
+## デプロイ
 
 ### 手動デプロイ
 
@@ -240,51 +241,51 @@ pnpm deploy:prod   # 本番環境
 
 ### 自動デプロイ (GitHub Actions)
 
-プロジェクトには自動CI/CDが含まれています：
+GitHub Actionsによる自動デプロイが設定されています。
 
-- `develop`ブランチへのプッシュ → 開発環境へデプロイ
-- `main`ブランチへのプッシュ → 本番環境へデプロイ
+- `develop`ブランチへのプッシュ: 開発環境へデプロイ
+- `main`ブランチへのプッシュ: 本番環境へデプロイ
 
 必要なGitHub Secrets:
 
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
 
-## 📚 主な機能
+## 主な特徴
 
 ### ゼロコストの静的ホスティング
 
-フロントエンドの静的アセットはWorkerの起動なしにCloudflareのエッジネットワークから直接配信され、ホスティングは完全無料です。
+フロントエンドの静的アセットはWorkerの起動なしにCloudflareのエッジネットワークから直接配信されるため、ホスティングコストが発生しません。
 
 ### エッジコンピューティング
 
-APIとデータベースの両方がCloudflareのエッジロケーションで実行され、グローバルに低遅延を実現します。
+APIとデータベースの両方がCloudflareのエッジロケーションで実行され、世界中のユーザーに対して低遅延を実現します。
 
-### 型安全性
+### 完全な型安全性
 
-PrismaとGraphQL Code Generatorにより、データベーススキーマからReactコンポーネントまでエンドツーエンドの型安全性を実現。
+PrismaとGraphQL Code Generatorにより、データベーススキーマからReactコンポーネントまでエンドツーエンドの型安全性を提供します。
 
-### モダンな開発体験
+### 効率的な開発環境
 
-- 開発時のホットリロード
-- 自動コード生成
-- 共有依存関係を持つモノレポ
-- 統合されたテストとリンティング
+- ホットリロードによる即時反映
+- 自動コード生成による開発効率化
+- Turborepoによる効率的なモノレポ管理
+- 統合されたリンティングと型チェック
 
-## ⚡ パフォーマンス
+## パフォーマンス
 
 - **グローバルCDN**: 300以上のエッジロケーションで静的アセットをキャッシュ
 - **エッジコンピューティング**: APIがユーザーの近くで実行
 - **最適化されたバンドル**: コード分割と遅延読み込み
-- **コールドスタートなし**: Workersはエッジで常に温かい状態
+- **コールドスタートの最小化**: Workersの高速起動
 
-## 📈 スケーラビリティ
+## スケーラビリティ
 
-- **サーバーレス**: サーバー管理不要で自動スケーリング
-- **エッジデータベース**: D1が一貫したパフォーマンスを提供
-- **静的アセット**: フロントエンドの無制限スケーリング
-- **従量課金**: 実際の使用量に応じたコスト
+- **サーバーレスアーキテクチャ**: 自動スケーリングによりトラフィックの増減に対応
+- **エッジデータベース**: D1による一貫したパフォーマンス
+- **静的アセット配信**: フロントエンドの無制限スケーリング
+- **従量課金モデル**: 使用量に応じた柔軟なコスト構造
 
-## 🐛 トラブルシューティング
+## トラブルシューティング
 
 一般的な問題と解決方法については[CLAUDE.md](./CLAUDE.md#トラブルシューティング)を参照してください。

@@ -8,7 +8,8 @@
   - Backend: Apollo Server on Cloudflare Workers + D1
   - Frontend: React SPA on Cloudflare Workers (Static Assets)
   - Auth: Supabase Auth
-- **モノレポ管理**: pnpm + Turborepo
+- **モノレポ管理**: Turborepo + pnpm workspaces
+- **パッケージマネージャー**: pnpm v8.14.0
 - **Node.jsバージョン**: v22.11.0 (LTS)
 - **Wranglerバージョン**: v4.20.0（重要：v4対応済み）
 
@@ -40,8 +41,9 @@ apollo-cloudflare-react/
 │       ├── .env                # ローカル開発用
 │       ├── .env.development     # 開発環境デプロイ用
 │       └── .env.production      # 本番環境デプロイ用
-├── turbo.json
-├── pnpm-workspace.yaml
+├── turbo.json                   # Turborepo設定
+├── pnpm-workspace.yaml          # pnpm workspaces設定
+├── .npmrc                       # pnpm設定
 ├── CLAUDE.md                    # プロジェクトドキュメント
 └── CLOUDFLARE_MIGRATION_TODO.md # 移行計画
 ```
@@ -277,6 +279,47 @@ pnpm deploy:prod  # .env.productionを使用してビルド
 4. **Apollo Server統合**
    - `@as-integrations/cloudflare-workers` を使用
    - Prisma D1 Adapter でデータベース接続
+
+## Turborepo設定
+
+このプロジェクトはTurborepo v2 + pnpm workspacesを使用してモノレポを管理しています。
+
+### 主要なタスク（turbo.json）
+
+- **build**: 依存関係を含めて全パッケージをビルド
+- **dev**: 開発サーバーを起動（キャッシュ無効、永続実行）
+- **generate**: GraphQLスキーマとコード生成
+- **type-check**: 型チェック（generateタスクに依存）
+- **lint**: コードのリンティング
+- **deploy:dev/prod**: デプロイメント（buildに依存）
+
+### pnpm workspacesとの統合
+
+- `pnpm-workspace.yaml`でパッケージ場所を定義
+- `pnpm --filter`コマンドで特定パッケージのタスクを実行
+- ワークスペース内の依存関係は自動的に解決
+
+### Turborepoの実行方法
+
+```bash
+# ルートから全パッケージのタスクを実行
+pnpm build              # turbo run build
+pnpm dev                # turbo run dev
+pnpm generate           # turbo run generate
+
+# 特定パッケージのタスクを実行
+pnpm --filter @apollo-cloudflare-react/backend build
+pnpm --filter @apollo-cloudflare-react/frontend dev
+
+# Turborepoのキャッシュをクリア
+rm -rf .turbo packages/*/.turbo
+```
+
+### Turborepoのメリット
+
+- **高速なタスク実行**: インテリジェントなキャッシュシステム
+- **並列実行**: 依存関係に基づく最適な実行順序
+- **インクリメンタルビルド**: 変更されたパッケージのみ再ビルド
 
 ## トラブルシューティング
 

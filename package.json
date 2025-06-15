@@ -7,17 +7,14 @@
     "node": "22.11.0"
   },
   "scripts": {
-    "dev": "turbo dev",
-    "build": "turbo build",
-    "generate": "turbo generate",
-    "lint": "turbo lint",
-    "type-check": "turbo type-check",
-    "test": "turbo test",
-    "format": "turbo format",
-    "prisma-migrate": "turbo prisma-migrate",
-    "prisma-deploy": "turbo prisma-deploy",
-    "bootstrap": "turbo prisma-deploy && pnpm generate && pnpm insert-seed",
-    "clean": "turbo clean && rm -rf node_modules .turbo"
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "generate": "turbo run generate",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "test": "turbo run test",
+    "format": "turbo run format",
+    "clean": "rm -rf node_modules .turbo packages/*/node_modules packages/*/dist packages/*/.turbo"
   },
   "devDependencies": {
     "eslint": "^9.29.0",
