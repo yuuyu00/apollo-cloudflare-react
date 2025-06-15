@@ -9,15 +9,21 @@ export const createArticle: MutationResolvers["createArticle"] = async (
   // 認証必須
   const authenticatedUser = requireAuth(user);
   
-  // 注意: 現在のスキーマではuserIdはInt型ですが、
-  // Supabase AuthのユーザーIDはUUID(string)なので、
-  // 実際の実装では変換が必要です
+  // 認証されたユーザーをsubで検索
+  const dbUser = await prisma.user.findUnique({
+    where: { sub: authenticatedUser.sub }
+  });
+  
+  if (!dbUser) {
+    throw new Error("User not found. Please sign up first.");
+  }
+  
   const article = await prisma.article.create({
     data: {
       title: input.title,
       content: input.content,
       user: {
-        connect: { id: input.userId },
+        connect: { id: dbUser.id },
       },
       categories: {
         connect: input.categoryIds
@@ -36,7 +42,30 @@ export const updateArticle: MutationResolvers["updateArticle"] = async (
   { prisma, user }
 ) => {
   // 認証必須
-  requireAuth(user);
+  const authenticatedUser = requireAuth(user);
+  
+  // 認証されたユーザーをsubで検索
+  const dbUser = await prisma.user.findUnique({
+    where: { sub: authenticatedUser.sub }
+  });
+  
+  if (!dbUser) {
+    throw new Error("User not found. Please sign up first.");
+  }
+  
+  // 記事の所有者確認
+  const existingArticle = await prisma.article.findUnique({
+    where: { id: input.id },
+    include: { user: true }
+  });
+  
+  if (!existingArticle) {
+    throw new Error("Article not found.");
+  }
+  
+  if (existingArticle.userId !== dbUser.id) {
+    throw new Error("You don't have permission to update this article.");
+  }
   
   const article = await prisma.article.update({
     where: { id: input.id },
@@ -60,7 +89,30 @@ export const deleteArticle: MutationResolvers["deleteArticle"] = async (
   { prisma, user }
 ) => {
   // 認証必須
-  requireAuth(user);
+  const authenticatedUser = requireAuth(user);
+  
+  // 認証されたユーザーをsubで検索
+  const dbUser = await prisma.user.findUnique({
+    where: { sub: authenticatedUser.sub }
+  });
+  
+  if (!dbUser) {
+    throw new Error("User not found. Please sign up first.");
+  }
+  
+  // 記事の所有者確認
+  const existingArticle = await prisma.article.findUnique({
+    where: { id },
+    include: { user: true }
+  });
+  
+  if (!existingArticle) {
+    throw new Error("Article not found.");
+  }
+  
+  if (existingArticle.userId !== dbUser.id) {
+    throw new Error("You don't have permission to delete this article.");
+  }
   
   try {
     await prisma.article.delete({

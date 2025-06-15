@@ -1,16 +1,22 @@
 -- シードデータの投入
 -- 注意: 既存のデータがある場合はエラーになる可能性があります
 
+-- 既存のデータをクリア（開発環境のみ）
+DELETE FROM _ArticleToCategory;
+DELETE FROM Article;
+DELETE FROM Category;
+DELETE FROM User;
+
 -- カテゴリーの挿入
 INSERT INTO Category (id, name) VALUES
   (1, 'Technology'),
   (2, 'Science'),
   (3, 'Business');
 
--- ユーザーの挿入
-INSERT INTO User (id, name, email) VALUES
-  (1, 'Test User 1', 'test1@example.com'),
-  (2, 'Test User 2', 'test2@example.com');
+-- ユーザーの挿入（subカラムに一時的な値を設定）
+INSERT INTO User (id, sub, name, email) VALUES
+  (1, 'seed_user_1_' || LOWER(HEX(RANDOMBLOB(8))), 'Test User 1', 'test1@example.com'),
+  (2, 'seed_user_2_' || LOWER(HEX(RANDOMBLOB(8))), 'Test User 2', 'test2@example.com');
 
 -- 記事の挿入
 INSERT INTO Article (id, title, content, userId) VALUES

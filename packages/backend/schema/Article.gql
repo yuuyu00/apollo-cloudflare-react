@@ -9,7 +9,6 @@ type Article {
 input CreateArticleInput {
   title: String!
   content: String!
-  userId: Int!
   categoryIds: [Int!]!
 }
 
@@ -17,7 +16,6 @@ input UpdateArticleInput {
   id: Int!
   title: String
   content: String
-  userId: Int
   categoryIds: [Int!]
 }
 

@@ -3,7 +3,7 @@ import type { Env } from "./types";
 
 // Supabase JWTからユーザー情報を抽出する型
 export interface AuthUser {
-  id: string;
+  sub: string; // Supabase Auth user ID (JWT payload.sub)
   email?: string;
   role?: string;
   app_metadata?: Record<string, unknown>;
@@ -40,12 +40,14 @@ export async function verifyJWT(
 
   try {
     // Supabase JWT Secret を使用して検証
+    console.log('Verifying JWT...');
+    console.log('JWT Secret exists:', !!env.SUPABASE_JWT_SECRET);
     const secret = new TextEncoder().encode(env.SUPABASE_JWT_SECRET);
     const { payload } = await jose.jwtVerify(token, secret);
+    console.log('JWT payload:', payload);
 
-    // Supabase のトークンペイロードから必要な情報を抽出
     const user: AuthUser = {
-      id: payload.sub as string,
+      sub: payload.sub as string,
       email: payload.email as string | undefined,
       role: payload.role as string | undefined,
       app_metadata: payload.app_metadata as Record<string, unknown> | undefined,

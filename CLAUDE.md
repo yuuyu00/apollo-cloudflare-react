@@ -77,10 +77,18 @@ GRAPHQL_PLAYGROUND=true
 CORS_ORIGIN=http://localhost:3000
 ```
 
+**Frontend 環境変数設定**
+
+Viteは以下の優先順位で環境変数ファイルを読み込みます：
+1. `.env.local` - すべての環境で最優先（gitignore対象）
+2. `.env.[mode]` - 特定のモード用（例: .env.development）
+3. `.env` - デフォルトの設定
+
 **Frontend (.env)**
 
 ```bash
 # packages/frontend/.env
+# デフォルト設定（ローカル開発用）
 VITE_GRAPHQL_ENDPOINT=http://localhost:8787/graphql
 VITE_SUPABASE_URL=your-supabase-url
 VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
@@ -90,6 +98,7 @@ VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 
 ```bash
 # packages/frontend/.env.development
+# 開発環境デプロイ用（pnpm deploy:dev）
 VITE_GRAPHQL_ENDPOINT=https://apollo-cloudflare-api.your-subdomain.workers.dev/graphql
 VITE_SUPABASE_URL=your-supabase-url
 VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
@@ -99,9 +108,19 @@ VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 
 ```bash
 # packages/frontend/.env.production
+# 本番環境デプロイ用（pnpm deploy:prod）
 VITE_GRAPHQL_ENDPOINT=https://apollo-cloudflare-api-prod.your-subdomain.workers.dev/graphql
 VITE_SUPABASE_URL=your-supabase-url
 VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+```
+
+**Frontend (.env.local)**
+
+```bash
+# packages/frontend/.env.local（オプション）
+# ローカル開発でデフォルト設定を上書きしたい場合
+# このファイルは.gitignoreに含まれるため、個人設定に最適
+VITE_GRAPHQL_ENDPOINT=http://localhost:8787/graphql
 ```
 
 ### 3. D1データベースのセットアップ
@@ -209,6 +228,67 @@ pnpm d1:execute:remote --command "SELECT * FROM User;"      # リモートでコ
 # データベース情報の確認
 pnpm wrangler d1 info apollo-cloudflare-db
 ```
+
+### D1ローカルデータベースの確認方法
+
+Prisma StudioはD1を直接サポートしていませんが、以下の方法でデータを確認できます：
+
+#### 1. Wrangler D1コマンド（推奨）
+
+```bash
+cd packages/backend
+
+# 便利なスクリプトでデータ確認
+pnpm d1:show:users      # ユーザー一覧
+pnpm d1:show:articles   # 記事一覧（著者名付き）
+pnpm d1:show:categories # カテゴリー一覧
+pnpm d1:show:tables     # テーブル一覧
+
+# 任意のSQLクエリを実行
+pnpm d1:execute --command "SELECT * FROM User WHERE email LIKE '%@example.com';"
+```
+
+#### 2. SQLiteツールで直接確認
+
+D1のローカルデータベースはSQLiteファイルとして保存されています：
+
+```bash
+# データベースファイルの場所を確認
+find .wrangler -name "*.sqlite" -type f
+
+# SQLite CLIで開く（例）
+sqlite3 .wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite
+
+# SQLiteコマンド例
+.tables              # テーブル一覧
+.schema User         # Userテーブルのスキーマ
+SELECT * FROM User;  # データ確認
+.quit               # 終了
+```
+
+#### 3. GUI SQLiteツール
+
+以下のツールでSQLiteファイルを開いて視覚的に確認できます：
+- **TablePlus**（macOS/Windows/Linux）
+- **DB Browser for SQLite**（無料）
+- **VS Code拡張機能**: SQLite Viewer
+
+#### 4. Prisma Studio（推奨）
+
+D1データベースでもPrisma Studioが使用できます：
+
+```bash
+cd packages/backend
+
+# Prisma Studioを起動
+pnpm prisma-studio
+
+# ブラウザで http://localhost:5555 を開く
+```
+
+**注意**: 
+- 事前に`pnpm dev`でD1データベースを初期化しておく必要があります
+- Prisma Studioを使用中は、データベースファイルがロックされる可能性があります
 
 ### デプロイ
 
@@ -320,6 +400,150 @@ rm -rf .turbo packages/*/.turbo
 - **高速なタスク実行**: インテリジェントなキャッシュシステム
 - **並列実行**: 依存関係に基づく最適な実行順序
 - **インクリメンタルビルド**: 変更されたパッケージのみ再ビルド
+
+## Catalyst UI Kit（Tailwind UIコンポーネント）
+
+### 概要
+
+Catalyst は Tailwind CSS チームが開発した最新のUIキットで、26個のReactコンポーネントを提供しています。このプロジェクトの `packages/frontend/src/components/ui/` に配置されており、フロントエンド開発で活用できます。
+
+### 利用可能なコンポーネント
+
+#### 基本要素
+- **Button**: プライマリ、セカンダリ、ゴースト等のバリエーション
+- **Input**: テキスト入力フィールド
+- **Badge**: ステータスやラベル表示
+- **Avatar**: ユーザーアバター表示
+- **Text/Heading**: タイポグラフィコンポーネント
+
+#### フォームコントロール
+- **Checkbox/Radio**: 選択コントロール
+- **Switch**: トグルスイッチ
+- **Textarea**: 複数行テキスト入力
+- **Field/FieldGroup/Label**: フォーム構造化コンポーネント
+
+#### ナビゲーション
+- **Sidebar/Navbar**: アプリケーションナビゲーション
+- **Dropdown**: ドロップダウンメニュー
+- **Pagination**: ページネーション
+
+#### レイアウト
+- **SidebarLayout**: サイドバー付きレイアウト
+- **StackedLayout**: 積層レイアウト
+- **AuthLayout**: 認証画面用レイアウト
+
+#### オーバーレイ
+- **Dialog**: モーダルダイアログ
+- **Alert**: アラート表示
+
+#### データ表示
+- **Table**: テーブルコンポーネント
+- **DescriptionList**: 説明リスト
+- **Listbox/Combobox**: 選択リスト
+
+### 使用方法
+
+```jsx
+// コンポーネントのインポート
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Field, FieldGroup, Label } from '@/components/ui/fieldset'
+
+// 使用例
+function ExampleForm() {
+  return (
+    <form>
+      <FieldGroup>
+        <Field>
+          <Label>名前</Label>
+          <Input name="name" placeholder="山田太郎" />
+        </Field>
+        <Field>
+          <Label>メールアドレス</Label>
+          <Input type="email" name="email" placeholder="email@example.com" />
+        </Field>
+        <Button type="submit">保存</Button>
+      </FieldGroup>
+    </form>
+  )
+}
+```
+
+### 技術仕様
+
+- **Tailwind CSS**: v4.0以上が必要
+- **依存パッケージ**: 
+  - `@headlessui/react`: アクセシビリティ対応のUIプリミティブ
+  - `framer-motion`: アニメーション
+  - `clsx`: クラス名の条件付き結合
+
+### 開発時の活用ポイント
+
+1. **カスタマイズ性**: Tailwindのユーティリティクラスで簡単にスタイル調整可能
+2. **アクセシビリティ**: キーボード操作とスクリーンリーダー対応済み
+3. **TypeScript対応**: 型安全な開発が可能
+4. **一貫性**: デザインシステムとして統一感のあるUI構築
+
+### GraphQL連携での活用例
+
+```jsx
+import { useState } from 'react'
+import { useQuery, useMutation } from '@apollo/client'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Dialog, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+
+function ArticleManager() {
+  const [isOpen, setIsOpen] = useState(false)
+  const { data, loading } = useQuery(GET_ARTICLES)
+  const [createArticle] = useMutation(CREATE_ARTICLE)
+
+  return (
+    <>
+      <Button onClick={() => setIsOpen(true)}>新規記事作成</Button>
+      
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableHeader>タイトル</TableHeader>
+            <TableHeader>作成日</TableHeader>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {data?.articles.map(article => (
+            <TableRow key={article.id}>
+              <TableCell>{article.title}</TableCell>
+              <TableCell>{article.createdAt}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+
+      <Dialog open={isOpen} onClose={setIsOpen}>
+        <DialogTitle>新規記事作成</DialogTitle>
+        <DialogDescription>
+          記事のタイトルと内容を入力してください
+        </DialogDescription>
+        {/* フォーム実装 */}
+      </Dialog>
+    </>
+  )
+}
+```
+
+### ベストプラクティス
+
+1. **コンポーネントの組み合わせ**: 小さなコンポーネントを組み合わせて複雑なUIを構築
+2. **一貫性の維持**: Catalystコンポーネントを基準にカスタムコンポーネントを作成
+3. **アクセシビリティ優先**: 提供されているアクセシビリティ機能を活用
+4. **パフォーマンス**: 必要なコンポーネントのみインポートして使用
+
+### 参考リンク
+
+- [Catalyst Documentation](https://catalyst.tailwindui.com/docs)
+- [Headless UI](https://headlessui.dev)
+- [Framer Motion](https://www.framer.com/docs/)
 
 ## トラブルシューティング
 

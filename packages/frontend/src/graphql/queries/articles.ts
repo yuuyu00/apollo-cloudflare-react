@@ -9,7 +9,6 @@ export const GET_ARTICLES = gql(`
       user {
         id
         name
-        email
       }
       categories {
         id
@@ -28,7 +27,6 @@ export const GET_ARTICLE = gql(`
       user {
         id
         name
-        email
       }
       categories {
         id

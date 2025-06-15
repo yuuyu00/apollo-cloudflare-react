@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link } from "react-router";
 import { useQuery } from "@apollo/client";
 import { GET_ARTICLE } from "../graphql/queries/articles";
 
@@ -52,7 +52,7 @@ export const ArticleDetail = () => {
         <h1 className="text-3xl font-bold mb-4">{article.title}</h1>
 
         <div className="text-sm text-gray-600 mb-6">
-          投稿者: {article.user.name} ({article.user.email})
+          投稿者: {article.user.name}
         </div>
 
         <div className="flex flex-wrap gap-2 mb-6">
