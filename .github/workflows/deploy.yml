@@ -27,7 +27,7 @@ jobs:
       - name: Generate Backend GraphQL Schema
         env:
           DATABASE_URL: "file:./dev.db"
-        run: pnpm --filter @apollo-cloudflare-react/backend generate:ci
+        run: pnpm --filter @apollo-cloudflare-react/backend generate
 
       - name: Setup Backend wrangler.toml with account ID
         run: |

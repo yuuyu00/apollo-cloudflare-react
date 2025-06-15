@@ -104,11 +104,6 @@ Backend は以下のファイルが自動生成される必要があります：
 
 **注意**: GitHub Actions では Prisma Client の生成はスキップされます。Prisma Client はローカルで生成されたものがバンドルされます。
 
-### CI用のコード生成コマンド
-
-- `pnpm generate:ci` - Prisma生成をスキップし、GraphQLスキーマのみ生成
-- DBへの接続は不要
-
 ## トラブルシューティング
 
 ### デプロイが失敗する場合
