@@ -26,7 +26,8 @@
     "d1:migrations:apply": "wrangler d1 migrations apply apollo-cloudflare-db --local",
     "d1:migrations:apply:remote": "wrangler d1 migrations apply apollo-cloudflare-db --remote",
     "d1:execute": "wrangler d1 execute apollo-cloudflare-db --local",
-    "d1:execute:remote": "wrangler d1 execute apollo-cloudflare-db --remote"
+    "d1:execute:remote": "wrangler d1 execute apollo-cloudflare-db --remote",
+    "prisma-studio": "DATABASE_URL=file:../$(find .wrangler/state/v3/d1/miniflare-D1DatabaseObject -type f -name '*.sqlite' -print -quit) prisma studio"
   },
   "dependencies": {
     "@apollo/server": "^4.12.2",

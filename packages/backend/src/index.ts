@@ -17,12 +17,18 @@ async function createContext(request: Request, env: Env, db: D1Database): Promis
   let user = null;
   try {
     const authHeader = request.headers.get('Authorization');
+    console.log('Auth header:', authHeader ? `Bearer ${authHeader.substring(7, 17)}...` : 'None'); // デバッグログ
     user = await verifyJWT(authHeader, env);
+    if (user) {
+      console.log('Authenticated user:', { sub: user.sub, email: user.email });
+    }
   } catch (error) {
     // 認証エラーはここではログのみ、リゾルバーで適切に処理
     if (error instanceof AuthError) {
       console.warn('Auth error:', error.message);
     }
+    // デバッグ用に詳細をログ出力
+    console.error('Authentication failed:', error);
   }
 
   return {
@@ -56,6 +62,20 @@ export default {
       typeDefs,
       resolvers,
       introspection: env.GRAPHQL_INTROSPECTION === 'true' || env.ENVIRONMENT !== 'production',
+      formatError: (formattedError, error) => {
+        // 開発環境では詳細なエラー情報を返す
+        if (env.ENVIRONMENT !== 'production') {
+          console.error('GraphQL Error:', error);
+          return {
+            ...formattedError,
+            extensions: {
+              ...formattedError.extensions,
+              originalError: error,
+            },
+          };
+        }
+        return formattedError;
+      },
     });
 
     // Cloudflare Workers用のハンドラーを作成

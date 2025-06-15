@@ -9,7 +9,6 @@ type Article {
 input CreateArticleInput {
   title: String!
   content: String!
-  userId: Int!
   categoryIds: [Int!]!
 }
 
@@ -17,7 +16,6 @@ input UpdateArticleInput {
   id: Int!
   title: String
   content: String
-  userId: Int
   categoryIds: [Int!]
 }
 
@@ -81,6 +79,7 @@ schema {
 
 type User {
   id: Int!
+  sub: String!
   name: String!
   email: String!
   articles: [Article!]!
@@ -89,4 +88,9 @@ type User {
 extend type Query {
   users: [User!]!
   user(id: Int!): User
+  me: User
+}
+
+extend type Mutation {
+  signUp(name: String!): User!
 }

@@ -1,5 +1,5 @@
 import { useQuery } from "@apollo/client";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { GET_ARTICLES } from "../graphql/queries/articles";
 
 export const ArticleList = () => {
@@ -24,39 +24,44 @@ export const ArticleList = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-8">記事一覧</h1>
+    <div className="max-w-7xl mx-auto py-20 px-4 sm:px-6 lg:px-8">
+      <h1 className="text-5xl font-bold mb-20 text-title">The blog with Cloudflare</h1>
 
       {data?.articles.length === 0 ? (
         <p className="text-gray-600">記事がありません。</p>
       ) : (
-        <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {data?.articles.map((article) => (
-            <article
+            <Link
               key={article.id}
-              className="bg-gray-800 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+              to={`/articles/${article.id}`}
+              className="group block"
             >
-              <h2 className="text-2xl font-semibold mb-2">
-                <Link to={`/articles/${article.id}`}>{article.title}</Link>
-              </h2>
+              <article className="bg-gray-800 p-6 rounded-2xl shadow-md hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 flex flex-col h-full transform hover:-translate-y-1 hover:bg-gray-750 border border-gray-700 hover:border-gray-600">
+                <h2 className="text-xl font-semibold mb-2 group-hover:text-blue-400 transition-colors duration-200">
+                  {article.title}
+                </h2>
 
-              <div className="text-sm text-gray-600 mb-3">
-                投稿者: {article.user.name} ({article.user.email})
-              </div>
+                <div className="text-sm text-gray-500 mb-3">
+                  {article.user.name}
+                </div>
 
-              <p className="mb-4 line-clamp-3">{article.content}</p>
+                <p className="mb-4 line-clamp-3 text-gray-300 flex-grow">
+                  {article.content}
+                </p>
 
-              <div className="flex flex-wrap gap-2">
-                {article.categories.map((category) => (
-                  <span
-                    key={category.id}
-                    className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
-                  >
-                    {category.name}
-                  </span>
-                ))}
-              </div>
-            </article>
+                <div className="flex flex-wrap gap-2 mt-auto">
+                  {article.categories.map((category) => (
+                    <span
+                      key={category.id}
+                      className="px-2 py-1 bg-blue-600/20 text-blue-400 text-xs rounded-full"
+                    >
+                      {category.name}
+                    </span>
+                  ))}
+                </div>
+              </article>
+            </Link>
           ))}
         </div>
       )}

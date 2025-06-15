@@ -1,5 +1,6 @@
 type User {
   id: Int!
+  sub: String!
   name: String!
   email: String!
   articles: [Article!]!
@@ -8,4 +9,9 @@ type User {
 extend type Query {
   users: [User!]!
   user(id: Int!): User
+  me: User
+}
+
+extend type Mutation {
+  signUp(name: String!): User!
 }
