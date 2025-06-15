@@ -1,7 +1,7 @@
 import { MutationResolvers } from "../../gqlTypes";
 
 export const createCategory: MutationResolvers["createCategory"] = async (
-  {},
+  _parent,
   { input },
   { prisma }
 ) => {
@@ -13,7 +13,7 @@ export const createCategory: MutationResolvers["createCategory"] = async (
 };
 
 export const updateCategory: MutationResolvers["updateCategory"] = async (
-  {},
+  _parent,
   { input },
   { prisma }
 ) => {

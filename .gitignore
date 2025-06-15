@@ -59,8 +59,12 @@ lerna-debug.log*
 
 # Generated files
 packages/backend/src/gqlTypes.ts
+packages/backend/src/schema.ts
 packages/backend/schema/schema.gql
 packages/frontend/src/generated-graphql
+
+# Backup files
+*.old
 
 # Prisma
 packages/backend/prisma/migrations/dev

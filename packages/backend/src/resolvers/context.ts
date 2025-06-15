@@ -1,11 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
-
 export interface Context {
   prisma: PrismaClient;
+  user?: any; // Supabase認証後のユーザー情報
 }
-
-export const createContext: () => Context = () => {
-  return { prisma };
-};

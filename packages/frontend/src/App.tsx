@@ -5,7 +5,7 @@ import { ArticleDetail, ArticleList } from "./screens";
 
 const App = () => {
   const apolloClient = new ApolloClient({
-    uri: "http://localhost:9000",
+    uri: import.meta.env.VITE_GRAPHQL_ENDPOINT,
     cache: new InMemoryCache(),
   });
 

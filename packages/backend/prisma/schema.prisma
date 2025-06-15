@@ -3,11 +3,12 @@
 
 datasource db {
   provider = "sqlite"
-  url      = "file:prisma.db"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 model User {

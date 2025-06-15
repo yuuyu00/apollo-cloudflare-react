@@ -33,45 +33,44 @@
 
 ### 1.2 package.json の更新
 
-- [ ] ルートの `package.json` のスクリプトを更新
-- [ ] ワークスペース設定を新しいディレクトリ構造に合わせて更新
-- [ ] Turbo.json の設定を更新
+- [x] ルートの `package.json` のスクリプトを更新
+- [x] ワークスペース設定を新しいディレクトリ構造に合わせて更新
+- [x] Turbo.json の設定を更新
 
 ## Phase 2: Backend (Cloudflare Workers) への移行
 
 ### 2.1 Wrangler 設定
 
-- [ ] `apps/api/wrangler.toml` を作成
-- [ ] Workers の設定（name, main, compatibility_date）
-- [ ] 環境変数の設定（SUPABASE_JWT_SECRET 等）
+- [x] `packages/backend/wrangler.toml` を作成
+- [x] Workers の設定（name, main, compatibility_date）
+- [x] 環境変数の設定（SUPABASE_JWT_SECRET 等） - .dev.varsで管理
 
 ### 2.2 D1 データベースのセットアップ
 
-- [ ] D1 データベースの作成 (`wrangler d1 create my-d1-database`)
-- [ ] `wrangler.toml` に D1 バインディングを追加
-- [ ] Prisma D1 Adapter のインストール (`@prisma/adapter-d1`)
-- [ ] `packages/database` に移行した Prisma スキーマの更新
+- [x] D1 データベースの作成 (`wrangler d1 create apollo-cloudflare-db`)
+- [x] `wrangler.toml` に D1 バインディングを追加
+- [x] Prisma D1 Adapter のインストール (`@prisma/adapter-d1`)
+- [x] Prisma スキーマのD1対応
 
 ### 2.3 Apollo Server の Workers 対応
 
-- [ ] `@as-integrations/cloudflare-workers` のインストール
-- [ ] `src/server.ts` を Workers 形式に書き換え
-- [ ] Express 依存の削除
-- [ ] Fetch API ベースのハンドラーに変更
-- [ ] コンテキスト生成ロジックの更新
+- [x] `@as-integrations/cloudflare-workers` のインストール
+- [x] `src/index.ts` を Workers 形式に作成
+- [x] Express 依存の削除
+- [x] Fetch API ベースのハンドラーに変更
+- [x] コンテキスト生成ロジックの更新
 
 ### 2.4 認証システムの実装
 
-- [ ] Supabase JWT 検証の実装
-- [ ] GraphQL コンテキストでのユーザー情報の設定
-- [ ] 認証が必要なリゾルバーへのガード実装
+- [x] Supabase JWT 検証の実装 - joseライブラリ使用
+- [x] GraphQL コンテキストでのユーザー情報の設定
+- [x] 認証が必要なリゾルバーへのガード実装
 
 ### 2.5 データベースマイグレーション
 
-- [ ] 既存の SQLite データをエクスポート
-- [ ] D1 用のマイグレーションファイルに変換
-- [ ] D1 へのマイグレーション実行
-- [ ] シードデータの投入
+- [x] D1 用のマイグレーションファイル作成 (0001_init.sql)
+- [x] D1 へのマイグレーション実行
+- [x] シードデータの投入 (0002_seed.sql)
 
 ## Phase 3: Frontend (Cloudflare Pages) への移行
 

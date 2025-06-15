@@ -1,11 +1,2 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
-
-export interface Context {
-  prisma: PrismaClient;
-}
-
-export const createContext: () => Context = () => {
-  return { prisma };
-};
+export type { GraphQLContext } from './types';
+export type { GraphQLContext as Context } from './types';
