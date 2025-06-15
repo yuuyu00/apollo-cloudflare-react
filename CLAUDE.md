@@ -4,7 +4,7 @@
 
 ## プロジェクト概要
 
-- **技術スタック**: 
+- **技術スタック**:
   - Backend: Apollo Server on Cloudflare Workers + D1
   - Frontend: React SPA on Cloudflare Workers (Static Assets)
   - Auth: Supabase Auth
@@ -49,6 +49,7 @@ apollo-cloudflare-react/
 ## セットアップ手順
 
 ### 1. 依存関係のインストール
+
 ```bash
 pnpm install
 ```
@@ -56,12 +57,14 @@ pnpm install
 ### 2. 環境変数の設定
 
 **Backend (.env)**
+
 ```bash
 # packages/backend/.env
 DATABASE_URL="file:./dev.db"  # Prisma CLI用のダミーURL
 ```
 
 **Backend (.dev.vars)**
+
 ```bash
 # packages/backend/.dev.vars
 SUPABASE_URL=your-supabase-url
@@ -73,6 +76,7 @@ CORS_ORIGIN=http://localhost:3000
 ```
 
 **Frontend (.env)**
+
 ```bash
 # packages/frontend/.env
 VITE_GRAPHQL_ENDPOINT=http://localhost:8787/graphql
@@ -81,6 +85,7 @@ VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
 
 **Frontend (.env.development)**
+
 ```bash
 # packages/frontend/.env.development
 VITE_GRAPHQL_ENDPOINT=https://apollo-cloudflare-api.your-subdomain.workers.dev/graphql
@@ -89,6 +94,7 @@ VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
 
 **Frontend (.env.production)**
+
 ```bash
 # packages/frontend/.env.production
 VITE_GRAPHQL_ENDPOINT=https://apollo-cloudflare-api-prod.your-subdomain.workers.dev/graphql
@@ -171,6 +177,8 @@ cd packages/frontend
 pnpm generate  # GraphQLクライアントコード生成
 ```
 
+**注意**: Frontend の codegen は Backend の `schema/schema.gql` を直接参照するため、Backend で先に `pnpm generate` を実行する必要があります。
+
 ### データベース操作
 
 ```bash
@@ -203,6 +211,7 @@ pnpm wrangler d1 info apollo-cloudflare-db
 ### デプロイ
 
 #### Backend (Apollo Server)
+
 ```bash
 cd packages/backend
 
@@ -229,6 +238,7 @@ pnpm wrangler config list  # 設定一覧
 ```
 
 #### Frontend (React SPA)
+
 ```bash
 cd packages/frontend
 
@@ -248,15 +258,18 @@ pnpm deploy:prod  # .env.productionを使用してビルド
 ### 重要な変更点
 
 1. **node_compat → nodejs_compat**
+
    - `node_compat = true` は廃止
    - `compatibility_flags = ["nodejs_compat"]` を使用
 
 2. **削除された設定**
+
    - `[upload]` セクション
    - `[build].watch_paths`
    - `[tsconfig]` セクション（tsconfig.jsonで管理）
 
 3. **エントリーポイント**
+
    - `src/index.ts` が必須（Cloudflare Workers形式）
    - Express形式の `server.ts` は使用不可
    - `export default` で fetch ハンドラーをエクスポート
@@ -286,6 +299,7 @@ pnpm wrangler d1 execute apollo-cloudflare-db --command "DROP TABLE IF EXISTS Us
 ### D1コマンドで対象環境を明確に指定する
 
 D1コマンドはデフォルトでローカルDBに対して実行されます：
+
 - **ローカル**: フラグなし または `--local`フラグ（デフォルト）
 - **リモート（本番）**: `--remote`フラグを明示的に追加
 
@@ -309,12 +323,14 @@ pnpm generate
 ## 開発フロー
 
 1. **機能開発**
+
    - GraphQLスキーマの更新（`packages/backend/schema/*.gql`）
    - `pnpm generate`で型定義を生成
    - リゾルバーの実装
    - フロントエンドの実装
 
 2. **データベース変更**
+
    - Prismaスキーマの更新（`packages/backend/prisma/schema.prisma`）
    - マイグレーションファイルの作成（`packages/backend/migrations/`）
    - `pnpm d1:migrations:apply:remote`でリモートにマイグレーション適用

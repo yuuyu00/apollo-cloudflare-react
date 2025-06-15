@@ -1,12 +1,8 @@
 import type { CodegenConfig } from "@graphql-codegen/cli";
-import * as dotenv from "dotenv";
-
-// .env ファイルを読み込む
-dotenv.config();
 
 const config: CodegenConfig = {
   overwrite: true,
-  schema: process.env.VITE_GRAPHQL_ENDPOINT,
+  schema: "../backend/schema/schema.gql",
   documents: ["src/**/*.{tsx,ts}"],
   generates: {
     "./src/generated-graphql/": {

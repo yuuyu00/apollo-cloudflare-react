@@ -10,6 +10,7 @@
 2. **Frontend (React SPA)** を Cloudflare Workers Static Assets にデプロイ
 
 デプロイは以下のブランチへのプッシュ時に実行されます：
+
 - `develop` ブランチ → 開発環境
 - `main` ブランチ → 本番環境
 
@@ -64,7 +65,7 @@ VITE_GRAPHQL_ENDPOINT=https://apollo-cloudflare-api.your-subdomain.workers.dev/g
 VITE_SUPABASE_URL=your-supabase-url
 VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 
-# packages/frontend/.env.production  
+# packages/frontend/.env.production
 VITE_GRAPHQL_ENDPOINT=https://apollo-cloudflare-api-prod.your-subdomain.workers.dev/graphql
 VITE_SUPABASE_URL=your-supabase-url
 VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
@@ -95,9 +96,9 @@ git push origin main
 ### Backend のコード生成
 
 Backend は以下のファイルが自動生成される必要があります：
+
 - `src/gqlTypes.ts` - GraphQL型定義
 - `src/schema.ts` - Workers用スキーマ（`generate-schema.js`で生成）
-- `schema/schema.gql` - 結合されたスキーマ
 
 これらは GitHub Actions で自動生成されるため、ローカルで生成してコミットする必要はありません。
 
@@ -113,14 +114,17 @@ Backend は以下のファイルが自動生成される必要があります：
 ### デプロイが失敗する場合
 
 1. **API Token の権限を確認**
+
    - Workers Scripts の Edit 権限があるか
    - 正しいアカウントのトークンか
 
 2. **D1 データベースの設定**
+
    - `wrangler.toml` の `database_id` が正しいか
    - データベースが作成されているか
 
 3. **ビルドエラー**
+
    - ローカルで `pnpm build` が成功するか確認
    - 型エラーがないか確認
 
@@ -132,14 +136,16 @@ Backend は以下のファイルが自動生成される必要があります：
 ### ログの確認方法
 
 GitHub Actions のログ：
+
 - リポジトリの Actions タブで確認
 
 Cloudflare Workers のログ：
+
 ```bash
 cd packages/backend
 pnpm wrangler tail
 
-cd packages/frontend  
+cd packages/frontend
 pnpm wrangler tail
 ```
 
