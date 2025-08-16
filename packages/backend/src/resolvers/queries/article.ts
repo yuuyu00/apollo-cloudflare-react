@@ -3,19 +3,15 @@ import { QueryResolvers } from "../../gqlTypes";
 export const articles: QueryResolvers["articles"] = async (
   _parent,
   _args,
-  { prisma }
+  { container }
 ) => {
-  return prisma.article.findMany();
+  return container.useCases.article.getArticles();
 };
 
 export const article: QueryResolvers["article"] = async (
   _parent,
   { id },
-  { prisma }
+  { container }
 ) => {
-  return prisma.article.findUnique({
-    where: {
-      id,
-    },
-  });
+  return container.useCases.article.getArticle(id);
 };

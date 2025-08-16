@@ -3,28 +3,15 @@ import { MutationResolvers } from "../../gqlTypes";
 export const createCategory: MutationResolvers["createCategory"] = async (
   _parent,
   { input },
-  { prisma }
+  { container }
 ) => {
-  const category = await prisma.category.create({
-    data: input,
-  });
-
-  return category;
+  return container.useCases.category.createCategory(input);
 };
 
 export const updateCategory: MutationResolvers["updateCategory"] = async (
   _parent,
   { input },
-  { prisma }
+  { container }
 ) => {
-  const category = await prisma.category.update({
-    data: {
-      name: input.name || undefined,
-    },
-    where: {
-      id: input.id,
-    },
-  });
-
-  return category;
+  return container.useCases.category.updateCategory(input.id, input);
 };

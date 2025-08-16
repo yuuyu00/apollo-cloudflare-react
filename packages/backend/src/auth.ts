@@ -1,16 +1,14 @@
 import * as jose from "jose";
 import type { Env } from "./types";
 
-// Supabase JWTからユーザー情報を抽出する型
 export interface AuthUser {
-  sub: string; // Supabase Auth user ID (JWT payload.sub)
+  sub: string;
   email?: string;
   role?: string;
   app_metadata?: Record<string, unknown>;
   user_metadata?: Record<string, unknown>;
 }
 
-// JWT検証エラー
 export class AuthError extends Error {
   constructor(message: string) {
     super(message);
@@ -29,7 +27,6 @@ export async function verifyJWT(
     return null;
   }
 
-  // Bearer トークンの解析
   const match = authHeader.match(/^Bearer\s+(\S+)$/);
   if (!match) {
     console.log("match", match);
@@ -39,7 +36,6 @@ export async function verifyJWT(
   const token = match[1];
 
   try {
-    // Supabase JWT Secret を使用して検証
     console.log('Verifying JWT...');
     console.log('JWT Secret exists:', !!env.SUPABASE_JWT_SECRET);
     const secret = new TextEncoder().encode(env.SUPABASE_JWT_SECRET);
