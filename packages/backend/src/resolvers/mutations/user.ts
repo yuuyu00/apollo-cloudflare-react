@@ -4,31 +4,19 @@ import { requireAuth } from "../../auth";
 export const signUp: MutationResolvers["signUp"] = async (
   _parent,
   { name },
-  { prisma, user }
+  { container, user }
 ) => {
   const authUser = requireAuth(user);
 
-  // Check if user already exists with this sub
-  const existingUser = await prisma.user.findUnique({
-    where: { sub: authUser.sub },
-  });
+  const existingUser = await container.useCases.user.getUserBySub(authUser.sub);
 
   if (existingUser) {
-    // Update existing user's name if it changed
-    return await prisma.user.update({
-      where: { sub: authUser.sub },
-      data: { name },
-      include: { articles: { include: { categories: true } } },
-    });
+    return await container.useCases.user.updateUser(existingUser.id, { name });
   }
 
-  // Create new user
-  return await prisma.user.create({
-    data: {
-      sub: authUser.sub,
-      email: authUser.email || "",
-      name,
-    },
-    include: { articles: { include: { categories: true } } },
+  return await container.useCases.user.createUser({
+    email: authUser.email || "",
+    name,
+    sub: authUser.sub,
   });
 };

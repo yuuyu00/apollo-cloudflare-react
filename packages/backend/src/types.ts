@@ -1,7 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 import type { AuthUser } from './auth';
+import type { Container } from './infrastructure/container';
 
-// Cloudflare Workers の環境変数
 export interface Env {
   DB: D1Database;
   SUPABASE_URL: string;
@@ -13,9 +13,9 @@ export interface Env {
   [key: string]: unknown;
 }
 
-// GraphQL リゾルバーのコンテキスト
 export interface GraphQLContext {
   prisma: PrismaClient;
   user: AuthUser | null;
   env: Env;
+  container: Container;
 }

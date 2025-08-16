@@ -23,6 +23,17 @@ apollo-cloudflare-react/
 │   │   │   ├── index.ts         # Cloudflare Workersエントリーポイント
 │   │   │   ├── schema.ts        # GraphQLスキーマ（自動生成）
 │   │   │   ├── db.ts           # Prisma D1設定
+│   │   │   ├── auth.ts         # JWT認証
+│   │   │   ├── types.ts        # 共通型定義
+│   │   │   ├── domain/         # ドメイン層（クリーンアーキテクチャ）
+│   │   │   │   ├── entities/   # ドメインエンティティ
+│   │   │   │   ├── errors/     # カスタムエラークラス
+│   │   │   │   └── repositories/ # リポジトリインターフェース
+│   │   │   ├── application/    # アプリケーション層
+│   │   │   │   └── usecases/   # ユースケース（ビジネスロジック）
+│   │   │   ├── infrastructure/ # インフラストラクチャ層
+│   │   │   │   ├── container.ts # DIコンテナ
+│   │   │   │   └── repositories/ # リポジトリ実装（Prisma）
 │   │   │   └── resolvers/      # GraphQLリゾルバー
 │   │   ├── prisma/
 │   │   │   └── schema.prisma    # Prismaスキーマ
@@ -587,13 +598,144 @@ rm -rf packages/frontend/src/generated-graphql
 pnpm generate
 ```
 
+## クリーンアーキテクチャ設計
+
+このプロジェクトのBackendはクリーンアーキテクチャの原則に従って設計されています。
+
+### レイヤー構成
+
+1. **Domain層** (`src/domain/`)
+   - **entities/**: ドメインエンティティ（ビジネスルールを含む）
+   - **errors/**: カスタムエラークラス（NotFoundError, ValidationError等）
+   - **repositories/**: リポジトリインターフェース（抽象化）
+
+2. **Application層** (`src/application/`)
+   - **usecases/**: ユースケース（ビジネスロジックの実装）
+   - 外部への依存はインターフェース経由のみ
+   - エラーハンドリングとバリデーション
+
+3. **Infrastructure層** (`src/infrastructure/`)
+   - **repositories/**: Prismaを使用したリポジトリ実装
+   - **container.ts**: 依存性注入（DI）コンテナ
+
+4. **Presentation層** (`src/resolvers/`)
+   - GraphQLリゾルバー
+   - 認証処理
+   - DIコンテナからユースケースを呼び出し
+
+### 依存関係の方向
+
+```
+Presentation → Application → Domain
+     ↓              ↓
+Infrastructure ← Domain (interfaces only)
+```
+
+### 実装例
+
+```typescript
+// Domain Entity
+export class Article {
+  canBeEditedBy(userId: number): boolean {
+    return this.userId === userId.toString();
+  }
+}
+
+// Use Case
+export class ArticleUseCase {
+  async updateArticle(id: number, input: UpdateArticleInput, userId: number) {
+    const article = await this.articleRepository.findById(id);
+    const articleEntity = ArticleEntity.fromPrismaModel(article);
+    
+    if (!articleEntity.canBeEditedBy(userId)) {
+      throw new UnauthorizedError('update', 'article');
+    }
+    
+    return this.articleRepository.update(id, input);
+  }
+}
+
+// Resolver
+export const updateArticle = async (_parent, { input }, { container, user }) => {
+  const dbUser = await container.useCases.user.getUserBySub(user.sub);
+  return container.useCases.article.updateArticle(input.id, input, dbUser.id);
+};
+```
+
+### カスタムエラー
+
+- `NotFoundError`: リソースが見つからない場合
+- `ValidationError`: 入力値が無効な場合
+- `UnauthorizedError`: 権限がない場合
+- `BusinessRuleViolationError`: ビジネスルール違反
+
+## コーディングルール
+
+### コメントの書き方
+
+**避けるべきコメント（自明なコメント）**：
+```typescript
+// ❌ 悪い例
+const user = await getUser(); // ユーザーを取得
+if (!user) { // ユーザーが存在しない場合
+  throw new Error(); // エラーをスロー
+}
+
+// ❌ 悪い例
+// 認証必須
+const authenticatedUser = requireAuth(user);
+
+// ❌ 悪い例
+// DIコンテナを作成
+const container = createContainer(prisma);
+```
+
+**良いコメント（理由や意図を説明）**：
+```typescript
+// ✅ 良い例
+// Workerの実行時間制限（30秒）を考慮してタイムアウトを設定
+const TIMEOUT_MS = 25000;
+
+// ✅ 良い例
+// Supabase JWTのsub claimはauth.users.idと同じ値
+// ただしPrismaのUser.idとは異なるため、User.subで検索する必要がある
+const dbUser = await getUserBySub(authUser.sub);
+
+// ✅ 良い例
+/**
+ * 記事の更新権限をチェックする
+ * - 記事の作成者のみが編集可能
+ * - 管理者権限の実装は今後追加予定
+ */
+```
+
+### 一般的なコーディング規則
+
+1. **TypeScriptの活用**
+   - `any`型の使用は最小限に
+   - 型推論が効く場合は明示的な型注釈は不要
+
+2. **エラーハンドリング**
+   - カスタムエラークラスを使用
+   - エラーメッセージは具体的に
+
+3. **関数・変数名**
+   - 意図が明確な名前を使用
+   - 略語は避ける（例: `usr` → `user`）
+
+4. **非同期処理**
+   - `async/await`を使用
+   - エラーは適切にキャッチして処理
+
 ## 開発フロー
 
 1. **機能開発**
 
    - GraphQLスキーマの更新（`packages/backend/schema/*.gql`）
    - `pnpm generate`で型定義を生成
-   - リゾルバーの実装
+   - ユースケースの実装（ビジネスロジック）
+   - リポジトリの実装（必要に応じて）
+   - リゾルバーの実装（薄く保つ）
    - フロントエンドの実装
 
 2. **データベース変更**
