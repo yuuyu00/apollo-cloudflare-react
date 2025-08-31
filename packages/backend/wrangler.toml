@@ -3,39 +3,51 @@ main = "src/index.ts"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
-# D1 Database binding
-[[d1_databases]]
-binding = "DB"
-database_name = "apollo-cloudflare-db"
-database_id = "c370ca69-c11d-4d00-9fd0-b7339850fd30" # wrangler d1 create実行後に置き換え
-migrations_dir = "migrations"
-
-# 環境変数（開発環境）
+# デフォルト環境変数
 [vars]
 ENVIRONMENT = "development"
-
-# workers.devドメインを無効化（カスタムドメイン設定後）
-# workers_dev = false
-
-# 本番環境設定
-[env.production]
-name = "apollo-cloudflare-api-prod"
-vars = { ENVIRONMENT = "production" }
 
 # 開発サーバー設定
 [dev]
 port = 8787
 local_protocol = "http"
 
-# ビルド設定
-# [build]
-# command = "pnpm run build"
+# 開発環境設定
+[env.dev]
+name = "apollo-cloudflare-api-dev"
+routes = [
+  { pattern = "api.dev.yu-f87ct9a.dev", custom_domain = true }
+]
 
-# TypeScript設定はtsconfig.jsonで管理
+[env.dev.vars]
+ENVIRONMENT = "development"
+GRAPHQL_INTROSPECTION = "true"
+GRAPHQL_PLAYGROUND = "true"
+CORS_ORIGIN = "https://dev.yu-f87ct9a.dev"
+SUPABASE_URL = "https://tatdnqkazluqzfgecauc.supabase.co"
 
-# カスタムドメイン設定（例）
-# route = { pattern = "api.yourdomain.com/*", zone_name = "yourdomain.com" }
-# または
-# routes = [
-#   { pattern = "api.yourdomain.com/*", zone_name = "yourdomain.com" }
-# ]
+[[env.dev.d1_databases]]
+binding = "DB"
+database_name = "apollo-cloudflare-db"
+database_id = "c370ca69-c11d-4d00-9fd0-b7339850fd30"
+migrations_dir = "migrations"
+
+# 本番環境設定
+[env.prod]
+name = "apollo-cloudflare-api-prod"
+routes = [
+  { pattern = "api.yu-f87ct9a.dev", custom_domain = true }
+]
+
+[env.prod.vars]
+ENVIRONMENT = "production"
+GRAPHQL_INTROSPECTION = "false"
+GRAPHQL_PLAYGROUND = "false"
+CORS_ORIGIN = "https://yu-f87ct9a.dev"
+SUPABASE_URL = "https://tatdnqkazluqzfgecauc.supabase.co"
+
+[[env.prod.d1_databases]]
+binding = "DB"
+database_name = "apollo-cloudflare-db-prod"
+database_id = "0e28d05c-20d4-49c4-a505-a0aba68a522d"
+migrations_dir = "migrations"

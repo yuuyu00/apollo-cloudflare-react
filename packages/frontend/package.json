@@ -13,8 +13,8 @@
     "codegen-watch": "graphql-codegen --watch",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist",
-    "deploy:dev": "pnpm run clean && pnpm run generate && tsc && vite build --mode staging && wrangler deploy",
-    "deploy:prod": "pnpm run clean && pnpm build && wrangler deploy --env production"
+    "deploy:dev": "pnpm run clean && vite build --mode development && wrangler deploy --env dev",
+    "deploy:prod": "pnpm run clean && vite build --mode production && wrangler deploy --env prod"
   },
   "dependencies": {
     "@apollo/client": "^3.13.8",
