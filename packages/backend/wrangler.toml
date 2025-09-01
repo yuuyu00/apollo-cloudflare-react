@@ -7,6 +7,13 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 ENVIRONMENT = "development"
 
+# D1データベース設定（ローカル開発用）
+[[d1_databases]]
+binding = "DB"
+database_name = "apollo-cloudflare-db"
+database_id = "c370ca69-c11d-4d00-9fd0-b7339850fd30"
+migrations_dir = "migrations"
+
 # 開発サーバー設定
 [dev]
 port = 8787
