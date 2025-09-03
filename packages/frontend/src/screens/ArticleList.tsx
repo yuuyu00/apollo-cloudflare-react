@@ -24,8 +24,10 @@ export const ArticleList = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto py-20 px-4 sm:px-6 lg:px-8">
-      <h1 className="text-5xl font-bold mb-20 text-title">The blog with Cloudflare</h1>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h1 className="text-5xl font-bold mb-20 text-title">
+        The blog with Cloudflare
+      </h1>
 
       {data?.articles.length === 0 ? (
         <p className="text-gray-600">記事がありません。</p>

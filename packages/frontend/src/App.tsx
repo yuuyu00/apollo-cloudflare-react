@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   createBrowserRouter,
   RouterProvider,
@@ -12,6 +13,7 @@ import {
   createHttpLink,
 } from "@apollo/client";
 import { setContext } from "@apollo/client/link/context";
+import { ClerkProvider, useAuth as useClerkAuth } from "@clerk/clerk-react";
 import {
   ArticleDetail,
   ArticleList,
@@ -28,7 +30,7 @@ import { ProfileCheckWrapper } from "./components/ProfileCheckWrapper";
 import { Button } from "./components/ui/button";
 import { useAuth } from "./contexts/AuthContext";
 import { PlusIcon } from "@heroicons/react/24/solid";
-import { supabase } from "./lib/supabase";
+import { setupZodJapaneseErrorMap } from "./lib/zod-japanese";
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -79,13 +81,23 @@ const RootLayout = () => {
   return (
     <ProfileCheckWrapper>
       <Header />
-      <Outlet />
+      <div className="py-24">
+        <Outlet />
+      </div>
       <FAB />
     </ProfileCheckWrapper>
   );
 };
 
-const AppProvider = ({ children }: { children: React.ReactNode }) => {
+const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+if (!CLERK_PUBLISHABLE_KEY) {
+  throw new Error("Missing Clerk Publishable Key");
+}
+
+const ApolloProviderWrapper = ({ children }: { children: React.ReactNode }) => {
+  const { getToken } = useClerkAuth();
+
   // Create HTTP link
   const httpLink = createHttpLink({
     uri: import.meta.env.VITE_GRAPHQL_ENDPOINT,
@@ -94,10 +106,7 @@ const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Create auth link to add JWT token to requests
   const authLink = setContext(async (_, { headers }) => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const token = session?.access_token;
+    const token = await getToken();
 
     return {
       headers: {
@@ -119,12 +128,20 @@ const AppProvider = ({ children }: { children: React.ReactNode }) => {
   });
 
   return (
+    <ApolloProvider client={apolloClient}>
+      <AuthProvider>
+        <ToastProvider>{children}</ToastProvider>
+      </AuthProvider>
+    </ApolloProvider>
+  );
+};
+
+const AppProvider = ({ children }: { children: React.ReactNode }) => {
+  return (
     <div className="bg-background min-h-screen text-text relative">
-      <ApolloProvider client={apolloClient}>
-        <AuthProvider>
-          <ToastProvider>{children}</ToastProvider>
-        </AuthProvider>
-      </ApolloProvider>
+      <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+        <ApolloProviderWrapper>{children}</ApolloProviderWrapper>
+      </ClerkProvider>
     </div>
   );
 };
@@ -132,11 +149,7 @@ const AppProvider = ({ children }: { children: React.ReactNode }) => {
 const router = createBrowserRouter([
   {
     path: "/",
-    element: (
-      <AppProvider>
-        <RootLayout />
-      </AppProvider>
-    ),
+    element: <RootLayout />,
     children: [
       {
         index: true,
@@ -177,7 +190,15 @@ const router = createBrowserRouter([
 ]);
 
 const App = () => {
-  return <RouterProvider router={router} />;
+  useEffect(() => {
+    setupZodJapaneseErrorMap();
+  }, []);
+
+  return (
+    <AppProvider>
+      <RouterProvider router={router} />
+    </AppProvider>
+  );
 };
 
 export default App;

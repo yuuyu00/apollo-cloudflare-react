@@ -1,32 +1,44 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router'
-import { useAuth } from '@/contexts/AuthContext'
-import { Field, Label } from '@/components/ui/fieldset'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import { useState } from "react";
+import { Link, useNavigate } from "react-router";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useAuth } from "@/contexts/AuthContext";
+import { Field, Label } from "@/components/ui/fieldset";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { loginSchema, type LoginFormData } from "@/schemas/auth";
 
 export const Login = () => {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const { signIn } = useAuth()
-  const navigate = useNavigate()
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const { signIn } = useAuth();
+  const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setLoading(true)
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  const onSubmit = async (data: LoginFormData) => {
+    setError(null);
+    setLoading(true);
 
     try {
-      await signIn(email, password)
-      navigate('/')
+      await signIn(data.email, data.password);
+      navigate("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'ログインに失敗しました')
+      setError(err instanceof Error ? err.message : "ログインに失敗しました");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
@@ -43,33 +55,39 @@ export const Login = () => {
           </div>
         )}
 
-        <form className="space-y-6" onSubmit={handleSubmit}>
+        <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <Field>
             <Label htmlFor="email">メールアドレス</Label>
             <Input
               id="email"
-              name="email"
               type="email"
               autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              {...register("email")}
               placeholder="you@example.com"
+              invalid={!!errors.email}
             />
+            {errors.email?.message && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.email.message}
+              </p>
+            )}
           </Field>
 
           <Field>
             <Label htmlFor="password">パスワード</Label>
             <Input
               id="password"
-              name="password"
               type="password"
               autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              {...register("password")}
               placeholder="••••••••"
+              invalid={!!errors.password}
             />
+            {errors.password?.message && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.password.message}
+              </p>
+            )}
           </Field>
 
           <div>
@@ -79,13 +97,13 @@ export const Login = () => {
               className="w-full"
               disabled={loading}
             >
-              {loading ? 'ログイン中...' : 'ログイン'}
+              {loading ? "ログイン中..." : "ログイン"}
             </Button>
           </div>
         </form>
 
         <p className="mt-10 text-center text-sm text-gray-500">
-          アカウントをお持ちでない場合{' '}
+          アカウントをお持ちでない場合{" "}
           <Link
             to="/signup"
             className="font-semibold leading-6 text-blue-600 hover:text-blue-500"
@@ -95,5 +113,5 @@ export const Login = () => {
         </p>
       </div>
     </div>
-  )
-}
+  );
+};

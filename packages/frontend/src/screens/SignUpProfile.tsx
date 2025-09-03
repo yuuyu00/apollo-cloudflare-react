@@ -2,11 +2,14 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useMutation, useQuery } from "@apollo/client";
 import { gql } from "@apollo/client";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { Field, Label, FieldGroup } from "@/components/ui/fieldset";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { profileSchema, type ProfileFormData } from "@/schemas/auth";
 
 const CHECK_USER = gql`
   query CheckUser {
@@ -34,8 +37,18 @@ export const SignUpProfile = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { showToast } = useToast();
-  const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      name: "",
+    },
+  });
 
   // Check if user already exists in our database
   const { loading: checkingUser } = useQuery(CHECK_USER, {
@@ -62,18 +75,12 @@ export const SignUpProfile = () => {
     },
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: ProfileFormData) => {
     setError(null);
-
-    if (!name.trim()) {
-      setError("名前を入力してください");
-      return;
-    }
 
     await signUp({
       variables: {
-        name: name.trim(),
+        name: data.name.trim(),
       },
     });
   };
@@ -107,7 +114,7 @@ export const SignUpProfile = () => {
         </div>
 
         <form
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmit(onSubmit)}
           className="bg-gray-900 p-8 rounded-lg shadow-lg"
         >
           <FieldGroup>
@@ -126,14 +133,17 @@ export const SignUpProfile = () => {
               <Label htmlFor="name">お名前 *</Label>
               <Input
                 id="name"
-                name="name"
                 type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                {...register("name")}
                 placeholder="山田 太郎"
                 autoFocus
-                required
+                invalid={!!errors.name}
               />
+              {errors.name?.message && (
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.name.message}
+                </p>
+              )}
               {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
             </Field>
           </FieldGroup>

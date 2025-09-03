@@ -1,45 +1,62 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
-import { XMarkIcon, CheckCircleIcon, ExclamationCircleIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  ReactNode,
+} from "react";
+import {
+  XMarkIcon,
+  CheckCircleIcon,
+  ExclamationCircleIcon,
+  InformationCircleIcon,
+} from "@heroicons/react/24/outline";
 
-type ToastType = 'success' | 'error' | 'info' | 'warning'
+type ToastType = "success" | "error" | "info" | "warning";
 
 interface Toast {
-  id: string
-  message: string
-  type: ToastType
+  id: string;
+  message: string;
+  type: ToastType;
 }
 
 interface ToastContextType {
-  showToast: (message: string, type?: ToastType) => void
+  showToast: (message: string, type?: ToastType) => void;
 }
 
-const ToastContext = createContext<ToastContextType | undefined>(undefined)
+const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export const useToast = () => {
-  const context = useContext(ToastContext)
+  const context = useContext(ToastContext);
   if (!context) {
-    throw new Error('useToast must be used within a ToastProvider')
+    throw new Error("useToast must be used within a ToastProvider");
   }
-  return context
-}
+  return context;
+};
 
 const toastIcons = {
   success: CheckCircleIcon,
   error: ExclamationCircleIcon,
   warning: ExclamationCircleIcon,
   info: InformationCircleIcon,
-}
+};
 
 const toastStyles = {
-  success: 'bg-green-50 text-green-800 border-green-200',
-  error: 'bg-red-50 text-red-800 border-red-200',
-  warning: 'bg-yellow-50 text-yellow-800 border-yellow-200',
-  info: 'bg-blue-50 text-blue-800 border-blue-200',
-}
+  success: "bg-green-50 text-green-800 border-green-200",
+  error: "bg-red-50 text-red-800 border-red-200",
+  warning: "bg-yellow-50 text-yellow-800 border-yellow-200",
+  info: "bg-blue-50 text-blue-800 border-blue-200",
+};
 
-const ToastComponent = ({ toast, onClose }: { toast: Toast; onClose: () => void }) => {
-  const Icon = toastIcons[toast.type]
-  
+const ToastComponent = ({
+  toast,
+  onClose,
+}: {
+  toast: Toast;
+  onClose: () => void;
+}) => {
+  const Icon = toastIcons[toast.type];
+
   return (
     <div
       className={`
@@ -58,27 +75,30 @@ const ToastComponent = ({ toast, onClose }: { toast: Toast; onClose: () => void 
         <XMarkIcon className="w-5 h-5" />
       </button>
     </div>
-  )
-}
+  );
+};
 
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
-  const [toasts, setToasts] = useState<Toast[]>([])
+  const [toasts, setToasts] = useState<Toast[]>([]);
 
   const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id))
-  }, [])
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
 
-  const showToast = useCallback((message: string, type: ToastType = 'info') => {
-    const id = Date.now().toString()
-    const newToast: Toast = { id, message, type }
-    
-    setToasts((prev) => [...prev, newToast])
-    
-    // 3秒後に自動的に削除
-    setTimeout(() => {
-      removeToast(id)
-    }, 3000)
-  }, [removeToast])
+  const showToast = useCallback(
+    (message: string, type: ToastType = "info") => {
+      const id = Date.now().toString();
+      const newToast: Toast = { id, message, type };
+
+      setToasts((prev) => [...prev, newToast]);
+
+      // 3秒後に自動的に削除
+      setTimeout(() => {
+        removeToast(id);
+      }, 3000);
+    },
+    [removeToast]
+  );
 
   return (
     <ToastContext.Provider value={{ showToast }}>
@@ -94,5 +114,5 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
         ))}
       </div>
     </ToastContext.Provider>
-  )
-}
+  );
+};
