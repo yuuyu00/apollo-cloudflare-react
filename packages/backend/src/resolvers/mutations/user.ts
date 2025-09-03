@@ -1,22 +1,39 @@
 import { MutationResolvers } from "../../gqlTypes";
 import { requireAuth } from "../../auth";
+import { createClerkClient } from "@clerk/backend";
 
 export const signUp: MutationResolvers["signUp"] = async (
   _parent,
   { name },
-  { container, user }
+  { services, user, env }
 ) => {
   const authUser = requireAuth(user);
 
-  const existingUser = await container.useCases.user.getUserBySub(authUser.sub);
-
-  if (existingUser) {
-    return await container.useCases.user.updateUser(existingUser.id, { name });
-  }
-
-  return await container.useCases.user.createUser({
+  const newUser = await services.user.createUser({
     email: authUser.email || "",
     name,
     sub: authUser.sub,
   });
+
+  try {
+    const clerkClient = createClerkClient({
+      secretKey: env.CLERK_SECRET_KEY,
+      publishableKey: env.CLERK_PUBLISHABLE_KEY,
+    });
+
+    const updatedUser = await clerkClient.users.updateUserMetadata(
+      authUser.sub,
+      {
+        publicMetadata: {
+          userId: newUser.id,
+          email: newUser.email,
+        },
+      }
+    );
+    console.log("Updated Clerk user metadata:", updatedUser);
+  } catch (error) {
+    console.error("Failed to update Clerk publicMetadata:", error);
+  }
+
+  return newUser;
 };

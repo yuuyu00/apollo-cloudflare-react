@@ -7,7 +7,7 @@
 - **技術スタック**:
   - Backend: Apollo Server on Cloudflare Workers + D1
   - Frontend: React SPA on Cloudflare Workers (Static Assets)
-  - Auth: Supabase Auth
+  - Auth: Clerk Auth
 - **モノレポ管理**: Turborepo + pnpm workspaces
 - **パッケージマネージャー**: pnpm v8.14.0
 - **Node.jsバージョン**: v22.11.0 (LTS)
@@ -23,18 +23,24 @@ apollo-cloudflare-react/
 │   │   │   ├── index.ts         # Cloudflare Workersエントリーポイント
 │   │   │   ├── schema.ts        # GraphQLスキーマ（自動生成）
 │   │   │   ├── db.ts           # Prisma D1設定
-│   │   │   ├── auth.ts         # JWT認証
+│   │   │   ├── auth.ts         # JWT認証 (Clerk Auth)
+│   │   │   ├── context.ts      # GraphQLコンテキスト
 │   │   │   ├── types.ts        # 共通型定義
-│   │   │   ├── domain/         # ドメイン層（クリーンアーキテクチャ）
-│   │   │   │   ├── entities/   # ドメインエンティティ
-│   │   │   │   ├── errors/     # カスタムエラークラス
-│   │   │   │   └── repositories/ # リポジトリインターフェース
-│   │   │   ├── application/    # アプリケーション層
-│   │   │   │   └── usecases/   # ユースケース（ビジネスロジック）
-│   │   │   ├── infrastructure/ # インフラストラクチャ層
-│   │   │   │   ├── container.ts # DIコンテナ
-│   │   │   │   └── repositories/ # リポジトリ実装（Prisma）
+│   │   │   ├── gqlTypes.ts     # GraphQL型定義（自動生成）
+│   │   │   ├── repositories/   # データアクセス層
+│   │   │   │   ├── article.ts  # ArticleRepository
+│   │   │   │   ├── category.ts # CategoryRepository
+│   │   │   │   └── user.ts     # UserRepository
+│   │   │   ├── services/       # ビジネスロジック層
+│   │   │   │   ├── article.ts  # ArticleService
+│   │   │   │   ├── category.ts # CategoryService
+│   │   │   │   └── user.ts     # UserService
+│   │   │   ├── errors/         # 共通エラー定義
+│   │   │   │   └── index.ts    # GraphQLError拡張
 │   │   │   └── resolvers/      # GraphQLリゾルバー
+│   │   │       ├── queries/    # Query resolvers
+│   │   │       ├── mutations/  # Mutation resolvers
+│   │   │       └── trivials/   # Field resolvers（関連データ取得）
 │   │   ├── prisma/
 │   │   │   └── schema.prisma    # Prismaスキーマ
 │   │   ├── migrations/          # D1マイグレーション
@@ -80,13 +86,15 @@ DATABASE_URL="file:./dev.db"  # Prisma CLI用のダミーURL
 
 ```bash
 # packages/backend/.dev.vars
-SUPABASE_URL=your-supabase-url
-SUPABASE_ANON_KEY=your-supabase-anon-key
-SUPABASE_JWT_SECRET=your-supabase-jwt-secret
+CLERK_SECRET_KEY=sk_test_xxxxxxxxxxxxx
+CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxx
+CLERK_PEM_PUBLIC_KEY=-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQE...\n-----END PUBLIC KEY-----
 GRAPHQL_INTROSPECTION=true
 GRAPHQL_PLAYGROUND=true
-CORS_ORIGIN=http://localhost:3000
+CORS_ORIGIN=http://localhost:5000
 ```
+
+**注意**: CLERK_PEM_PUBLIC_KEY は Clerk ダッシュボードの API Keys > Show JWT Public Key > PEM Public Key から取得します。
 
 **Frontend 環境変数設定**
 
@@ -101,8 +109,7 @@ Viteは以下の優先順位で環境変数ファイルを読み込みます：
 # packages/frontend/.env
 # デフォルト設定（ローカル開発用）
 VITE_GRAPHQL_ENDPOINT=http://localhost:8787/graphql
-VITE_SUPABASE_URL=your-supabase-url
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxx
 ```
 
 **Frontend (.env.development)**
@@ -111,8 +118,7 @@ VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 # packages/frontend/.env.development
 # 開発環境デプロイ用（pnpm deploy:dev）
 VITE_GRAPHQL_ENDPOINT=https://apollo-cloudflare-api.your-subdomain.workers.dev/graphql
-VITE_SUPABASE_URL=your-supabase-url
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxx
 ```
 
 **Frontend (.env.production)**
@@ -121,8 +127,7 @@ VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 # packages/frontend/.env.production
 # 本番環境デプロイ用（pnpm deploy:prod）
 VITE_GRAPHQL_ENDPOINT=https://apollo-cloudflare-api-prod.your-subdomain.workers.dev/graphql
-VITE_SUPABASE_URL=your-supabase-url
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxx
 ```
 
 **Frontend (.env.local)**
@@ -318,9 +323,8 @@ pnpm deploy:dev  # または pnpm wrangler deploy
 pnpm deploy:prod  # または pnpm wrangler deploy --env production
 
 # シークレット環境変数の設定
-pnpm wrangler secret put SUPABASE_JWT_SECRET
-pnpm wrangler secret put SUPABASE_URL
-pnpm wrangler secret put SUPABASE_ANON_KEY
+pnpm wrangler secret put CLERK_SECRET_KEY
+pnpm wrangler secret put CLERK_PEM_PUBLIC_KEY
 
 # ログの確認
 pnpm wrangler tail
@@ -502,7 +506,7 @@ import { useState } from 'react'
 import { useQuery, useMutation } from '@apollo/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Dialog, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Dialog, DialogActions, DialogBody, DialogTitle } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 function ArticleManager() {
@@ -533,10 +537,14 @@ function ArticleManager() {
 
       <Dialog open={isOpen} onClose={setIsOpen}>
         <DialogTitle>新規記事作成</DialogTitle>
-        <DialogDescription>
+        <DialogBody>
           記事のタイトルと内容を入力してください
-        </DialogDescription>
-        {/* フォーム実装 */}
+          {/* フォーム実装 */}
+        </DialogBody>
+        <DialogActions>
+          <Button onClick={() => setIsOpen(false)}>キャンセル</Button>
+          <Button type="submit">作成</Button>
+        </DialogActions>
       </Dialog>
     </>
   )
@@ -598,76 +606,98 @@ rm -rf packages/frontend/src/generated-graphql
 pnpm generate
 ```
 
-## クリーンアーキテクチャ設計
+## シンプルな2層アーキテクチャ設計
 
-このプロジェクトのBackendはクリーンアーキテクチャの原則に従って設計されています。
+このプロジェクトのBackendは、プロジェクトの規模に適したシンプルな2層アーキテクチャで設計されています。
 
 ### レイヤー構成
 
-1. **Domain層** (`src/domain/`)
-   - **entities/**: ドメインエンティティ（ビジネスルールを含む）
-   - **errors/**: カスタムエラークラス（NotFoundError, ValidationError等）
-   - **repositories/**: リポジトリインターフェース（抽象化）
+1. **Repositories層** (`src/repositories/`)
+   - **責務**: 純粋なデータベース操作
+   - Prismaクライアントの薄いラッパー
+   - Prismaモデルをそのまま返す（型変換なし）
+   - ビジネス要件に応じた特化メソッドを自由に追加可能
 
-2. **Application層** (`src/application/`)
-   - **usecases/**: ユースケース（ビジネスロジックの実装）
-   - 外部への依存はインターフェース経由のみ
-   - エラーハンドリングとバリデーション
+2. **Services層** (`src/services/`)
+   - **責務**: ビジネスロジック
+   - 権限チェック
+   - 入力検証
+   - エラーハンドリング
+   - 複数リポジトリの協調
 
-3. **Infrastructure層** (`src/infrastructure/`)
-   - **repositories/**: Prismaを使用したリポジトリ実装
-   - **container.ts**: 依存性注入（DI）コンテナ
-
-4. **Presentation層** (`src/resolvers/`)
-   - GraphQLリゾルバー
-   - 認証処理
-   - DIコンテナからユースケースを呼び出し
-
-### 依存関係の方向
-
-```
-Presentation → Application → Domain
-     ↓              ↓
-Infrastructure ← Domain (interfaces only)
-```
+3. **Resolvers層** (`src/resolvers/`)
+   - **queries/**: Query resolvers
+   - **mutations/**: Mutation resolvers  
+   - **trivials/**: Field resolvers（関連データの遅延読み込み）
 
 ### 実装例
 
 ```typescript
-// Domain Entity
-export class Article {
-  canBeEditedBy(userId: number): boolean {
-    return this.userId === userId.toString();
+// Repository - データアクセス
+export class ArticleRepository {
+  constructor(private prisma: PrismaClient) {}
+  
+  async findById(id: number): Promise<Article | null> {
+    return this.prisma.article.findUnique({ where: { id } });
+  }
+  
+  // ビジネス要件に応じた特化メソッド
+  async findPublishedByUserId(userId: number): Promise<Article[]> {
+    return this.prisma.article.findMany({
+      where: { userId, status: 'PUBLISHED' },
+      orderBy: { createdAt: 'desc' }
+    });
   }
 }
 
-// Use Case
-export class ArticleUseCase {
-  async updateArticle(id: number, input: UpdateArticleInput, userId: number) {
-    const article = await this.articleRepository.findById(id);
-    const articleEntity = ArticleEntity.fromPrismaModel(article);
+// Service - ビジネスロジック
+export class ArticleService {
+  async updateArticle(
+    id: number,
+    input: UpdateInput,
+    userId: number
+  ): Promise<Article> {
+    const article = await this.articleRepo.findById(id);
     
-    if (!articleEntity.canBeEditedBy(userId)) {
-      throw new UnauthorizedError('update', 'article');
+    // 権限チェック
+    if (article.userId !== userId) {
+      throw new GraphQLError("You don't have permission");
     }
     
-    return this.articleRepository.update(id, input);
+    return this.articleRepo.update(id, input);
   }
 }
 
-// Resolver
-export const updateArticle = async (_parent, { input }, { container, user }) => {
-  const dbUser = await container.useCases.user.getUserBySub(user.sub);
-  return container.useCases.article.updateArticle(input.id, input, dbUser.id);
+// Resolver - GraphQLインターフェース
+export const updateArticle = async (_parent, { input }, { services, user }) => {
+  const authenticatedUser = requireAuth(user);
+  // Clerk publicMetadataからuserIdを取得（DBアクセスなし）
+  return services.article.updateArticle(input.id, input, authenticatedUser.userId);
+};
+
+// Trivial Resolver - 関連データの遅延読み込み
+export const Article: ArticleResolvers = {
+  categories: async (parent, {}, { prisma }) => {
+    const categories = await prisma.article
+      .findUnique({ where: { id: parent.id } })
+      .categories();
+    return categories || [];
+  }
 };
 ```
 
-### カスタムエラー
+### エラーハンドリング
 
-- `NotFoundError`: リソースが見つからない場合
-- `ValidationError`: 入力値が無効な場合
-- `UnauthorizedError`: 権限がない場合
-- `BusinessRuleViolationError`: ビジネスルール違反
+```typescript
+// errors/index.ts
+import { GraphQLError } from "graphql";
+
+export function notFoundError(resource: string, id: string) {
+  return new GraphQLError(`${resource} with ID ${id} not found`, {
+    extensions: { code: 'NOT_FOUND' }
+  });
+}
+```
 
 ## コーディングルール
 
@@ -697,8 +727,8 @@ const container = createContainer(prisma);
 const TIMEOUT_MS = 25000;
 
 // ✅ 良い例
-// Supabase JWTのsub claimはauth.users.idと同じ値
-// ただしPrismaのUser.idとは異なるため、User.subで検索する必要がある
+// Clerk JWTのsub claimはuser_xxxの形式
+// PrismaのUser.subと照合して検索する必要がある
 const dbUser = await getUserBySub(authUser.sub);
 
 // ✅ 良い例
@@ -712,12 +742,18 @@ const dbUser = await getUserBySub(authUser.sub);
 ### 一般的なコーディング規則
 
 1. **TypeScriptの活用**
-   - `any`型の使用は最小限に
+   - **`any`型の使用は禁止** - 適切な型定義を使用すること
+     - 例外: catch節でのエラーハンドリング時のみ、型ガードと併用して使用可
    - 型推論が効く場合は明示的な型注釈は不要
+   - unknown型を活用し、型ガードで安全に絞り込む
 
 2. **エラーハンドリング**
-   - カスタムエラークラスを使用
-   - エラーメッセージは具体的に
+   - **GraphQLErrorを直接throwすることは禁止** - 必ず`src/errors/index.ts`に定義されたエラー関数を使用すること
+     - `notFoundError()` - リソースが見つからない場合
+     - `validationError()` - バリデーションエラーの場合
+     - `forbiddenError()` - 権限がない場合
+   - エラーコードは`ERROR_CODES`定数を使用
+   - エラーメッセージは具体的に記述
 
 3. **関数・変数名**
    - 意図が明確な名前を使用
@@ -733,7 +769,7 @@ const dbUser = await getUserBySub(authUser.sub);
 
    - GraphQLスキーマの更新（`packages/backend/schema/*.gql`）
    - `pnpm generate`で型定義を生成
-   - ユースケースの実装（ビジネスロジック）
+   - サービスの実装（ビジネスロジック）
    - リポジトリの実装（必要に応じて）
    - リゾルバーの実装（薄く保つ）
    - フロントエンドの実装
@@ -795,4 +831,4 @@ name = "apollo-cloudflare-frontend-prod"
 - [Workers Static Assets](https://developers.cloudflare.com/workers/static-assets/)
 - [Prisma D1 Adapter](https://www.prisma.io/docs/orm/overview/databases/cloudflare-d1)
 - [Apollo Server Cloudflare](https://www.apollographql.com/docs/apollo-server/deployment/cloudflare-workers)
-- [Supabase Auth](https://supabase.com/docs/guides/auth)
+- [Clerk Auth](https://clerk.com/docs)

@@ -1,12 +1,12 @@
-import * as jose from "jose";
+import { createClerkClient } from "@clerk/backend";
 import type { Env } from "./types";
 
 export interface AuthUser {
   sub: string;
-  email?: string;
+  email: string;
+  userId: number;
+  sessionId: string;
   role?: string;
-  app_metadata?: Record<string, unknown>;
-  user_metadata?: Record<string, unknown>;
 }
 
 export class AuthError extends Error {
@@ -16,51 +16,75 @@ export class AuthError extends Error {
   }
 }
 
-/**
- * Authorization ヘッダーから JWT を検証し、ユーザー情報を返す
- */
 export async function verifyJWT(
-  authHeader: string | null,
-  env: Env
+  request: Request,
+  env: Env,
+  options?: { skipUserIdCheck?: boolean }
 ): Promise<AuthUser | null> {
-  if (!authHeader) {
-    return null;
-  }
-
-  const match = authHeader.match(/^Bearer\s+(\S+)$/);
-  if (!match) {
-    console.log("match", match);
-    throw new AuthError("Invalid authorization header format");
-  }
-
-  const token = match[1];
-
   try {
-    console.log('Verifying JWT...');
-    console.log('JWT Secret exists:', !!env.SUPABASE_JWT_SECRET);
-    const secret = new TextEncoder().encode(env.SUPABASE_JWT_SECRET);
-    const { payload } = await jose.jwtVerify(token, secret);
-    console.log('JWT payload:', payload);
+    // Get the Authorization header
+    const authHeader = request.headers.get("Authorization");
 
-    const user: AuthUser = {
-      sub: payload.sub as string,
-      email: payload.email as string | undefined,
-      role: payload.role as string | undefined,
-      app_metadata: payload.app_metadata as Record<string, unknown> | undefined,
-      user_metadata: payload.user_metadata as
-        | Record<string, unknown>
-        | undefined,
-    };
-
-    return user;
-  } catch (error) {
-    if (error instanceof jose.errors.JWTExpired) {
-      throw new AuthError("Token has expired");
-    } else if (error instanceof jose.errors.JWTInvalid) {
-      throw new AuthError("Token is invalid");
-    } else {
-      throw new AuthError("Token verification failed");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return null;
     }
+
+    const clerk = createClerkClient({
+      secretKey: env.CLERK_SECRET_KEY,
+      publishableKey: env.CLERK_PUBLISHABLE_KEY,
+      jwtKey: env.CLERK_PEM_PUBLIC_KEY,
+    });
+
+    try {
+      const requestState = await clerk.authenticateRequest(request, {
+        authorizedParties: [env.CORS_ORIGIN ?? ""],
+      });
+
+      if (!requestState.isAuthenticated) {
+        return null;
+      }
+
+      const auth = requestState.toAuth();
+      const emailFromClaims =
+        (auth.sessionClaims?.email as string | null) ?? null;
+      const userIdFromClaims =
+        (auth.sessionClaims?.userId as number | null) ?? null;
+
+      if (
+        (!emailFromClaims || !emailFromClaims.includes("@")) &&
+        !options?.skipUserIdCheck
+      ) {
+        throw new AuthError("Invalid email in token");
+      }
+
+      if (!userIdFromClaims && !options?.skipUserIdCheck) {
+        throw new AuthError("Invalid userId in token");
+      }
+
+      const user: AuthUser = {
+        sub: auth.userId,
+        userId: userIdFromClaims ?? 0,
+        sessionId: auth.sessionId,
+        email: emailFromClaims ?? "",
+      };
+
+      return user;
+    } catch (error) {
+      console.error("authenticateRequest failed:", error);
+      return null;
+    }
+  } catch (error) {
+    console.error("Token verification error:", error);
+
+    if (error && typeof error === "object" && "clerkError" in error) {
+      const clerkError = error as { clerkError: boolean; status?: number };
+      if (clerkError.status === 401) {
+        return null;
+      }
+    }
+
+    console.error("Unexpected auth error:", error);
+    return null;
   }
 }
 

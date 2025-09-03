@@ -3,6 +3,7 @@
 ## 開発環境のセットアップ
 
 ### 前提条件
+
 - Backend が起動していること（`cd ../backend && pnpm dev`）
 - 環境変数が設定されていること（`.env` ファイル）
 
@@ -32,6 +33,7 @@ pnpm codegen-watch
 ```
 
 エラーが発生する場合：
+
 - Backend が `http://localhost:8787` で起動しているか確認
 - `codegen.ts` の schema URL が正しいか確認
 
@@ -63,11 +65,13 @@ VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 ### `pnpm codegen-watch` でエラーが発生する
 
 1. Backend サーバーが起動しているか確認
+
    ```bash
    cd ../backend && pnpm dev
    ```
 
 2. GraphQL エンドポイントにアクセスできるか確認
+
    ```bash
    curl http://localhost:8787/graphql
    ```

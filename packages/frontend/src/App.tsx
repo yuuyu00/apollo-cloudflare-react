@@ -1,7 +1,27 @@
-import { createBrowserRouter, RouterProvider, Link, Outlet, useNavigate } from "react-router";
-import { ApolloProvider, ApolloClient, InMemoryCache, createHttpLink } from "@apollo/client";
+import { useEffect } from "react";
+import {
+  createBrowserRouter,
+  RouterProvider,
+  Link,
+  Outlet,
+  useNavigate,
+} from "react-router";
+import {
+  ApolloProvider,
+  ApolloClient,
+  InMemoryCache,
+  createHttpLink,
+} from "@apollo/client";
 import { setContext } from "@apollo/client/link/context";
-import { ArticleDetail, ArticleList, Login, Signup, CreateArticle, SignUpProfile } from "./screens";
+import { ClerkProvider, useAuth as useClerkAuth } from "@clerk/clerk-react";
+import {
+  ArticleDetail,
+  ArticleList,
+  Login,
+  Signup,
+  CreateArticle,
+  SignUpProfile,
+} from "./screens";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import { AuthGuard } from "./components/AuthGuard";
@@ -10,7 +30,7 @@ import { ProfileCheckWrapper } from "./components/ProfileCheckWrapper";
 import { Button } from "./components/ui/button";
 import { useAuth } from "./contexts/AuthContext";
 import { PlusIcon } from "@heroicons/react/24/solid";
-import { supabase } from "./lib/supabase";
+import { setupZodJapaneseErrorMap } from "./lib/zod-japanese";
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -20,15 +40,17 @@ const Header = () => {
       {user ? (
         <div className="flex items-center gap-4">
           <span className="text-sm text-gray-400">{user.email}</span>
-          <Button onClick={signOut} plain className="text-text hover:text-white">
+          <Button
+            onClick={signOut}
+            plain
+            className="text-text hover:text-white"
+          >
             ログアウト
           </Button>
         </div>
       ) : (
         <Link to="/login">
-          <Button color="blue">
-            ログイン
-          </Button>
+          <Button color="blue">ログイン</Button>
         </Link>
       )}
     </div>
@@ -59,29 +81,39 @@ const RootLayout = () => {
   return (
     <ProfileCheckWrapper>
       <Header />
-      <Outlet />
+      <div className="py-24">
+        <Outlet />
+      </div>
       <FAB />
     </ProfileCheckWrapper>
   );
 };
 
-const AppProvider = ({ children }: { children: React.ReactNode }) => {
+const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+if (!CLERK_PUBLISHABLE_KEY) {
+  throw new Error("Missing Clerk Publishable Key");
+}
+
+const ApolloProviderWrapper = ({ children }: { children: React.ReactNode }) => {
+  const { getToken } = useClerkAuth();
+
   // Create HTTP link
   const httpLink = createHttpLink({
     uri: import.meta.env.VITE_GRAPHQL_ENDPOINT,
+    credentials: "include",
   });
 
   // Create auth link to add JWT token to requests
   const authLink = setContext(async (_, { headers }) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
+    const token = await getToken();
 
     return {
       headers: {
         ...headers,
         authorization: token ? `Bearer ${token}` : "",
-      }
-    }
+      },
+    };
   });
 
   // Apollo Client with auth context
@@ -90,20 +122,26 @@ const AppProvider = ({ children }: { children: React.ReactNode }) => {
     cache: new InMemoryCache(),
     defaultOptions: {
       watchQuery: {
-        fetchPolicy: 'cache-and-network',
+        fetchPolicy: "cache-and-network",
       },
     },
   });
 
   return (
+    <ApolloProvider client={apolloClient}>
+      <AuthProvider>
+        <ToastProvider>{children}</ToastProvider>
+      </AuthProvider>
+    </ApolloProvider>
+  );
+};
+
+const AppProvider = ({ children }: { children: React.ReactNode }) => {
+  return (
     <div className="bg-background min-h-screen text-text relative">
-      <ApolloProvider client={apolloClient}>
-        <AuthProvider>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
-        </AuthProvider>
-      </ApolloProvider>
+      <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+        <ApolloProviderWrapper>{children}</ApolloProviderWrapper>
+      </ClerkProvider>
     </div>
   );
 };
@@ -111,7 +149,7 @@ const AppProvider = ({ children }: { children: React.ReactNode }) => {
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <AppProvider><RootLayout /></AppProvider>,
+    element: <RootLayout />,
     children: [
       {
         index: true,
@@ -152,7 +190,15 @@ const router = createBrowserRouter([
 ]);
 
 const App = () => {
-  return <RouterProvider router={router} />;
+  useEffect(() => {
+    setupZodJapaneseErrorMap();
+  }, []);
+
+  return (
+    <AppProvider>
+      <RouterProvider router={router} />
+    </AppProvider>
+  );
 };
 
 export default App;

@@ -3,15 +3,15 @@ import { QueryResolvers } from "../../gqlTypes";
 export const articles: QueryResolvers["articles"] = async (
   _parent,
   _args,
-  { container }
+  { services }
 ) => {
-  return container.useCases.article.getArticles();
+  return services.article.getArticles();
 };
 
 export const article: QueryResolvers["article"] = async (
   _parent,
   { id },
-  { container }
+  { services }
 ) => {
-  return container.useCases.article.getArticle(id);
+  return services.article.getArticle(id);
 };
