@@ -1,4 +1,4 @@
--- Add sub column to User table for Supabase Auth user ID
+-- Add sub column to User table for Clerk Auth user ID
 -- This migration needs to handle foreign key constraints properly
 -- Note: D1 doesn't support BEGIN TRANSACTION, so operations are atomic by default
 

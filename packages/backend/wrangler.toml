@@ -14,6 +14,9 @@ database_name = "apollo-cloudflare-db"
 database_id = "c370ca69-c11d-4d00-9fd0-b7339850fd30"
 migrations_dir = "migrations"
 
+[observability.logs]
+enabled = true
+
 # 開発サーバー設定
 [dev]
 port = 8787
@@ -31,7 +34,8 @@ ENVIRONMENT = "development"
 GRAPHQL_INTROSPECTION = "true"
 GRAPHQL_PLAYGROUND = "true"
 CORS_ORIGIN = "https://dev.yu-f87ct9a.dev"
-SUPABASE_URL = "https://tatdnqkazluqzfgecauc.supabase.co"
+CLERK_PEM_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArmHdTw+M4xALbZn5roVl\nP8I9WYwkuHQMw/p4GoI9oIutoiNLd5+ICk/7gcgpeNbuLCZgjl1z+lbq9lJngUs7\nYAmBKgRS14fYvzXYxrgIXglqvqSpxMkcqA43sEhf+ABczUQXvpifief5dW8kcH1i\nYndMhmd+yO+0iHO15T2rx66uQ2wKSNDokpXFTmKEuPempCMIT/I4UO3FEfWwP8TT\nN4uBNfT9+bixtc4ITqxfHDiJGZjV3ExxMbUgs3FfUkqz5brPyk1MngzgDn+99+K9\n6l12PgjzzNpbeTn5G38Qw6gRWOqbQR5AaB/74q9d5xBTNY5S/5+Cf2tzTTZNrxz3\n3wIDAQAB\n-----END PUBLIC KEY-----"
+CLERK_PUBLISHABLE_KEY="pk_test_bGlnaHQtYWtpdGEtNDcuY2xlcmsuYWNjb3VudHMuZGV2JA"
 
 [[env.dev.d1_databases]]
 binding = "DB"
@@ -51,7 +55,6 @@ ENVIRONMENT = "production"
 GRAPHQL_INTROSPECTION = "false"
 GRAPHQL_PLAYGROUND = "false"
 CORS_ORIGIN = "https://yu-f87ct9a.dev"
-SUPABASE_URL = "https://tatdnqkazluqzfgecauc.supabase.co"
 
 [[env.prod.d1_databases]]
 binding = "DB"

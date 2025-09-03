@@ -3,15 +3,15 @@ import { QueryResolvers } from "../../gqlTypes";
 export const categories: QueryResolvers["categories"] = async (
   _parent,
   _args,
-  { container }
+  { services }
 ) => {
-  return container.useCases.category.getCategories();
+  return services.category.getCategories();
 };
 
 export const category: QueryResolvers["category"] = async (
   _parent,
   { id },
-  { container }
+  { services }
 ) => {
-  return container.useCases.category.getCategory(id);
+  return services.category.getCategory(id);
 };

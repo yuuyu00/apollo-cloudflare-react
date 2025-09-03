@@ -39,12 +39,12 @@
   "dependencies": {
     "@apollo/server": "^4.12.2",
     "@as-integrations/cloudflare-workers": "^1.1.1",
+    "@clerk/backend": "^2.10.1",
     "@graphql-codegen/cli": "^5.0.7",
     "@prisma/adapter-d1": "^6.9.0",
     "@prisma/client": "^6.9.0",
     "graphql": "^16.11.0",
     "graphql-tag": "^2.12.6",
-    "jose": "^6.0.11",
     "prisma": "^6.9.0",
     "typescript": "^5.8.3"
   },
