@@ -54,7 +54,7 @@ When receiving a complex task, IMMEDIATELY decompose it as follows:
 
 ```yaml
 # Example: "Add image upload feature"
-parallel_phase_1:
+development_phase_1:
   - agent: infra-devops-developer
     tasks: [create_worker_package, configure_r2]
   - agent: backend-developer
@@ -62,18 +62,37 @@ parallel_phase_1:
   - agent: frontend-developer
     tasks: [create_ui_components]
 
-sequential_phase_2:
+review_phase_1:
+  - agent: infra-devops-reviewer
+    tasks: [review_worker_config]
+    depends_on: [infra-devops-developer]
+  - agent: backend-reviewer
+    tasks: [review_schema_changes]
+    depends_on: [backend-developer]
+  - agent: frontend-reviewer
+    tasks: [review_components]
+    depends_on: [frontend-developer]
+
+development_phase_2:
   - agent: backend-developer
     tasks: [implement_graphql_api]
-    depends_on: [phase_1]
+    depends_on: [review_phase_1]
   - agent: frontend-developer
     tasks: [integrate_with_api]
-    depends_on: [phase_1]
+    depends_on: [review_phase_1]
 
-validation_phase_3:
+review_phase_2:
+  - agent: backend-reviewer
+    tasks: [review_api_implementation]
+    depends_on: [backend-developer_phase_2]
+  - agent: frontend-reviewer
+    tasks: [review_integration]
+    depends_on: [frontend-developer_phase_2]
+
+validation_phase_final:
   - agent: e2e-system-validator
     tasks: [verify_integration]
-    depends_on: [phase_2]
+    depends_on: [review_phase_2]
 ```
 
 ### Execution Rules
@@ -83,6 +102,12 @@ validation_phase_3:
 3. **EXPLICIT DEPENDENCIES**: Clearly define task dependencies
 4. **ARTIFACT SHARING**: Agents communicate through created files/configs
 5. **NO SINGLE-AGENT COMPLEX TASKS**: Never assign multi-layer tasks to one agent
+6. **MANDATORY CODE REVIEW**: After ANY developer agent completes work, the corresponding reviewer MUST be invoked:
+   - `backend-developer` → `backend-reviewer` (REQUIRED)
+   - `frontend-developer` → `frontend-reviewer` (REQUIRED)
+   - `infra-devops-developer` → `infra-devops-reviewer` (REQUIRED)
+   - Reviews must occur BEFORE proceeding to next phase
+   - Never skip review phase even for minor changes
 
 ### Common Patterns to ALWAYS Decompose
 
