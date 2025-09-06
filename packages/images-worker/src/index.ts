@@ -41,15 +41,18 @@ async function handleGetImage(
 
   const [, userId, filename] = match;
   const r2Key = `images/articles/${userId}/${filename}`;
-  const transformType = (url.searchParams.get("type") || "content") as TransformationType;
+  const transformType = (url.searchParams.get("type") ||
+    "content") as TransformationType;
 
   if (!IMAGE_TRANSFORMATIONS[transformType]) {
     return new Response("Invalid transformation type", { status: 400 });
   }
 
-  // Simple cache key without format variation
-  const cacheKey = `https://cache.images/${r2Key}?type=${transformType}`;
-  const cacheKeyRequest = new Request(cacheKey, { method: "GET" });
+  // Use actual request URL as cache key for better CDN integration
+  const cacheKeyRequest = new Request(request.url, {
+    method: "GET",
+    headers: request.headers,
+  });
   const cache = caches.default;
 
   try {
@@ -58,6 +61,10 @@ async function handleGetImage(
     if (cachedResponse) {
       const response = new Response(cachedResponse.body, cachedResponse);
       response.headers.set("X-Cache-Status", "HIT");
+      response.headers.set(
+        "CF-Cache-Status",
+        cachedResponse.headers.get("CF-Cache-Status") || "HIT"
+      );
       return response;
     }
 
@@ -84,18 +91,22 @@ async function handleGetImage(
     }
 
     // Always output as WebP for consistent caching
-    const transformedImageResult = await env.IMAGES_API
-      .input(originalImage.body)
+    const transformedImageResult = await env.IMAGES_API.input(
+      originalImage.body
+    )
       .transform(transformOptions)
       .output({ format: OUTPUT_FORMAT, quality: transform.quality });
 
     const transformedImage = await transformedImageResult.response();
     const imageArrayBuffer = await transformedImage.arrayBuffer();
 
-    // Build response headers
+    // Build response headers with multi-layer caching support
     const headers = new Headers({
       "Content-Type": OUTPUT_FORMAT,
-      "Cache-Control": `public, max-age=${CACHE_TTL}, immutable`,
+      // Layer 1: Browser cache (1 year)
+      "Cache-Control": `public, max-age=${CACHE_TTL}, s-maxage=${CACHE_TTL}, immutable`,
+      // Layer 2: CDN cache control (Cloudflare-specific)
+      "CDN-Cache-Control": `max-age=${CACHE_TTL}`,
       "X-Cache-Status": "MISS",
       "X-Transform-Type": transformType,
     });
@@ -104,11 +115,19 @@ async function handleGetImage(
     const origin = env.CORS_ORIGIN || "*";
     headers.set("Access-Control-Allow-Origin", origin);
     headers.set("Access-Control-Allow-Methods", "GET, OPTIONS");
-    headers.set("Access-Control-Expose-Headers", "X-Cache-Status, CF-Cache-Status");
+    headers.set(
+      "Access-Control-Expose-Headers",
+      "X-Cache-Status, CF-Cache-Status"
+    );
 
     // Simple ETag for conditional requests
     const etag = `"${filename}-${transformType}"`;
     headers.set("ETag", etag);
+
+    // Add debugging information
+    if (request.cf?.colo) {
+      headers.set("X-Edge-Location", String(request.cf.colo));
+    }
 
     // Check for conditional request
     const ifNoneMatch = request.headers.get("If-None-Match");
@@ -117,23 +136,30 @@ async function handleGetImage(
         status: 304,
         headers: {
           ETag: etag,
-          "Cache-Control": `public, max-age=${CACHE_TTL}, immutable`,
+          "Cache-Control": `public, max-age=${CACHE_TTL}, s-maxage=${CACHE_TTL}, immutable`,
+          "CDN-Cache-Control": `max-age=${CACHE_TTL}`,
           "X-Cache-Status": "MISS-304",
         },
       });
     }
 
-    const response = new Response(imageArrayBuffer, { status: 200, headers });
+    // Create response (cf options are for fetch, not Response constructor)
+    const response = new Response(imageArrayBuffer, {
+      status: 200,
+      headers,
+    });
 
-    // Store in cache asynchronously
+    // Layer 3: Store in Worker Cache API (data center local)
     const responseToCache = response.clone();
     if (ctx) {
       ctx.waitUntil(
-        cache.put(cacheKeyRequest, responseToCache)
+        cache
+          .put(cacheKeyRequest, responseToCache)
           .catch((err) => console.error("Cache put error:", err))
       );
     } else {
-      cache.put(cacheKeyRequest, responseToCache)
+      cache
+        .put(cacheKeyRequest, responseToCache)
         .catch((err) => console.error("Cache put error:", err));
     }
 
@@ -147,10 +173,7 @@ async function handleGetImage(
 /**
  * Handle image upload
  */
-async function handleUpload(
-  request: Request,
-  env: Env
-): Promise<Response> {
+async function handleUpload(request: Request, env: Env): Promise<Response> {
   const origin = env.CORS_ORIGIN || "*";
 
   // Verify authentication

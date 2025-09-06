@@ -26,11 +26,7 @@ export class ArticleService {
     take?: number;
     skip?: number;
   }): Promise<Article[]> {
-    return this.articleRepo.findMany({
-      orderBy: { id: "desc" },
-      take: args?.take,
-      skip: args?.skip,
-    });
+    return this.articleRepo.findMany();
   }
 
   async getArticlesByAuthor(authorId: number): Promise<Article[]> {

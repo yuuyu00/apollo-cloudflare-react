@@ -21,6 +21,15 @@
     }
   ],
 
+  // KV Namespace binding（ローカル開発用）
+  "kv_namespaces": [
+    {
+      "binding": "CACHE_KV",
+      "id": "cccb01f3488e4597b6ca674f3fbdc647",
+      "preview_id": "cccb01f3488e4597b6ca674f3fbdc647"
+    }
+  ],
+
   "observability": {
     "logs": {
       "enabled": true
@@ -59,6 +68,12 @@
           "database_id": "c370ca69-c11d-4d00-9fd0-b7339850fd30",
           "migrations_dir": "migrations"
         }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "CACHE_KV",
+          "id": "cccb01f3488e4597b6ca674f3fbdc647"
+        }
       ]
     },
 
@@ -83,6 +98,12 @@
           "database_name": "apollo-cloudflare-db-prod",
           "database_id": "0e28d05c-20d4-49c4-a505-a0aba68a522d",
           "migrations_dir": "migrations"
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "CACHE_KV",
+          "id": "b1682f099faa473691ef0482a9a06229"
         }
       ]
     }

@@ -15,10 +15,10 @@ export function createContext(
   env: Env
 ) {
   const repositories = {
-    article: new ArticleRepository(prisma),
-    category: new CategoryRepository(prisma),
-    user: new UserRepository(prisma),
-    image: new ImageArticleRepository(prisma),
+    article: new ArticleRepository(prisma, env.CACHE_KV),
+    category: new CategoryRepository(prisma, env.CACHE_KV),
+    user: new UserRepository(prisma, env.CACHE_KV),
+    image: new ImageArticleRepository(prisma, env.CACHE_KV),
   };
 
   const services = {

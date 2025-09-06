@@ -1,24 +1,54 @@
 import type { PrismaClient, ImageArticle, Prisma } from "@prisma/client";
+import { KVCacheHelper } from "./cache-helper";
 
 export class ImageArticleRepository {
-  constructor(private prisma: PrismaClient) {}
+  private readonly cache: KVCacheHelper;
+
+  private readonly CACHE_TTL = {
+    ARTICLE_IMAGES: 7200,
+  };
+
+  constructor(
+    private prisma: PrismaClient,
+    kv?: KVNamespace
+  ) {
+    this.cache = new KVCacheHelper(kv);
+  }
 
   async createMany(
     data: Prisma.ImageArticleCreateManyInput[]
   ): Promise<Prisma.BatchPayload> {
-    return this.prisma.imageArticle.createMany({ data });
+    const result = await this.prisma.imageArticle.createMany({ data });
+
+    if (data.length > 0) {
+      const articleIds = [...new Set(data.map((d) => d.articleId))];
+      await this.cache.invalidate(
+        articleIds.map((id) => `article:${id}:images`)
+      );
+    }
+
+    return result;
   }
 
   async findByArticleId(articleId: number): Promise<ImageArticle[]> {
-    return this.prisma.imageArticle.findMany({
-      where: { articleId },
-      orderBy: { createdAt: "asc" },
-    });
+    return this.cache.getOrFetch(
+      `article:${articleId}:images`,
+      () =>
+        this.prisma.imageArticle.findMany({
+          where: { articleId },
+          orderBy: { createdAt: "asc" },
+        }),
+      this.CACHE_TTL.ARTICLE_IMAGES
+    );
   }
 
   async deleteByArticleId(articleId: number): Promise<Prisma.BatchPayload> {
-    return this.prisma.imageArticle.deleteMany({
+    const result = await this.prisma.imageArticle.deleteMany({
       where: { articleId },
     });
+
+    await this.cache.invalidate([`article:${articleId}:images`]);
+
+    return result;
   }
 }
