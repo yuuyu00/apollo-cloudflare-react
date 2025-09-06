@@ -38,7 +38,8 @@ jobs:
           for package in backend frontend images-worker; do
             if [ -f "packages/$package/wrangler.jsonc" ]; then
               cd "packages/$package"
-              sed -i '3a account_id = "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"' wrangler.jsonc
+              # Insert account_id in JSON format after line 3
+              sed -i '3a\  "account_id": "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",' wrangler.jsonc
               echo "Updated wrangler.jsonc with account ID for $package"
               cd ../..
             fi
