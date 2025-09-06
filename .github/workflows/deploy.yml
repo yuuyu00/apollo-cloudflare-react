@@ -24,13 +24,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Generate code
+      - name: Generate and Build
         env:
           DATABASE_URL: "file:./dev.db"
-        run: pnpm generate
-
-      - name: Build all packages
-        run: pnpm build
+        run: |
+          # First generate backend schema
+          pnpm --filter @apollo-cloudflare-react/backend generate
+          # Then build all packages (frontend can now find schema.gql)
+          pnpm build
 
       - name: Setup wrangler.jsonc files with account ID
         run: |
