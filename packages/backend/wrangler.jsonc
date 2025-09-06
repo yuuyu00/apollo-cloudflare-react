@@ -74,6 +74,13 @@
           "binding": "CACHE_KV",
           "id": "cccb01f3488e4597b6ca674f3fbdc647"
         }
+      ],
+      "secrets_store_secrets": [
+        {
+          "binding": "CLERK_SECRET_KEY",
+          "store_id": "76c9dcdc4aad4ed9a50350b38cd2dd5c",
+          "secret_name": "CLERK_SECRET_KEY_DEV"
+        }
       ]
     },
 
@@ -90,7 +97,9 @@
         "ENVIRONMENT": "production",
         "GRAPHQL_INTROSPECTION": "false",
         "GRAPHQL_PLAYGROUND": "false",
-        "CORS_ORIGIN": "https://yu-f87ct9a.dev"
+        "CORS_ORIGIN": "https://yu-f87ct9a.dev",
+        "CLERK_PEM_PUBLIC_KEY": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3j8iQk3wGVn+fWLEaZON\ngjkUeIdmpQe7QSKk7XMRXuFKw0FcB4yz9Pg8OlZFOPu+brWx0HkV4mU0YdxPX1n7\n8EAGr3SqrvJbiI03Mu1I2eR2wdbAS3DyMAqv8G4A/0KjZdJX2Gh3HP6u4slHRZDu\n+krCoUo1Hgvo1snJUCo1Kyx2GVsT6YvGyq2dMsWFZEoOAME47619QtxZOfu0+x+B\nHljo98TL60SsGJf5/Ss+RbEC2ZD6c1E60gbacg7pXNn9+n7dloo3Vq4VoDcUDjxd\nHol3YVDsWNkuzmq4l/bW7is0vuqzqmQAagGozT9ehzmC5PiHnW0edcSdBNj/vfSN\nkwIDAQAB\n-----END PUBLIC KEY-----",
+        "CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsueXUtZjg3Y3Q5YS5kZXYk"
       },
       "d1_databases": [
         {
@@ -104,6 +113,13 @@
         {
           "binding": "CACHE_KV",
           "id": "b1682f099faa473691ef0482a9a06229"
+        }
+      ],
+      "secrets_store_secrets": [
+        {
+          "binding": "CLERK_SECRET_KEY",
+          "store_id": "76c9dcdc4aad4ed9a50350b38cd2dd5c",
+          "secret_name": "CLERK_SECRET_KEY_PROD"
         }
       ]
     }
