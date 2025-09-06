@@ -31,7 +31,7 @@ export class ArticleRepository {
   async findByUserId(userId: number): Promise<Article[]> {
     return this.prisma.article.findMany({
       where: { userId },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
   }
 }

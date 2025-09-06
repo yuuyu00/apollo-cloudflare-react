@@ -1,5 +1,4 @@
 {
-  // Cloudflare Worker configuration for Images service
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "apollo-cloudflare-images",
   "main": "src/index.ts",
@@ -20,6 +19,12 @@
     }
   ],
 
+  // Images API binding for image transformations
+  "images": {
+    "binding": "IMAGES_API"
+  },
+
+  // Observability設定
   "observability": {
     "logs": {
       "enabled": true
@@ -32,9 +37,8 @@
     "local_protocol": "http"
   },
 
-  // 環境別設定
+  // 開発環境設定
   "env": {
-    // 開発環境設定
     "dev": {
       "name": "apollo-cloudflare-images-dev",
       "routes": [
@@ -54,7 +58,10 @@
           "binding": "IMAGES_BUCKET",
           "bucket_name": "apollo-cloudflare-dev"
         }
-      ]
+      ],
+      "images": {
+        "binding": "IMAGES_API"
+      }
     },
 
     // 本番環境設定
@@ -77,7 +84,10 @@
           "binding": "IMAGES_BUCKET",
           "bucket_name": "apollo-cloudflare-prod"
         }
-      ]
+      ],
+      "images": {
+        "binding": "IMAGES_API"
+      }
     }
   }
 }

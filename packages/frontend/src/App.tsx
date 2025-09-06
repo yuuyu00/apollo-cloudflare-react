@@ -22,6 +22,7 @@ import {
   CreateArticle,
   SignUpProfile,
 } from "./screens";
+import ImageCacheTest from "./pages/ImageCacheTest";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import { AuthGuard } from "./components/AuthGuard";
@@ -176,6 +177,10 @@ const router = createBrowserRouter([
       {
         path: "auth/callback",
         element: <EmailConfirmationHandler />,
+      },
+      {
+        path: "image-cache-test",
+        element: <ImageCacheTest />,
       },
       // Protected routes
       {

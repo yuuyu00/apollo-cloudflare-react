@@ -73,6 +73,7 @@ input ImageInput {
   size: Int!
   type: String!
 }
+
 type Query {
   node(id: ID!): Node
 }

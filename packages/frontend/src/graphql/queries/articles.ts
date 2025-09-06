@@ -14,6 +14,11 @@ export const GET_ARTICLES = gql(`
         id
         name
       }
+      images {
+        id
+        key
+        createdAt
+      }
     }
   }
 `);
@@ -31,6 +36,11 @@ export const GET_ARTICLE = gql(`
       categories {
         id
         name
+      }
+      images {
+        id
+        key
+        createdAt
       }
     }
   }
