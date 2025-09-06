@@ -5,6 +5,16 @@ on:
     branches:
       - main
       - develop
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
 
 jobs:
   build-and-deploy:
@@ -51,7 +61,15 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          # Handle manual workflow dispatch
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ "${{ github.event.inputs.environment }}" == "prod" ]]; then
+              pnpm deploy:prod
+            else
+              pnpm deploy:dev
+            fi
+          # Handle push events
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             pnpm deploy:prod
           else
             pnpm deploy:dev
