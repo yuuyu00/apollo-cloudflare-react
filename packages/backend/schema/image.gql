@@ -1,0 +1,15 @@
+type ImageArticle {
+  id: Int!
+  articleId: Int!
+  key: String!
+  size: Int!
+  type: String!
+  createdAt: String!
+  updatedAt: String!
+}
+
+input ImageInput {
+  key: String!
+  size: Int!
+  type: String!
+}

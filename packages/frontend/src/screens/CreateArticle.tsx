@@ -4,12 +4,14 @@ import { useMutation, useQuery } from "@apollo/client";
 import { gql } from "@apollo/client";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@clerk/clerk-react";
 import { useToast } from "@/contexts/ToastContext";
 import { Field, Label, FieldGroup } from "@/components/ui/fieldset";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { ImageUpload, type UploadedImage } from "@/components/ImageUpload";
+import { uploadImage } from "@/utils/imageUpload";
 import {
   createArticleSchema,
   type CreateArticleFormData,
@@ -35,15 +37,29 @@ const CREATE_ARTICLE = gql`
         id
         name
       }
+      images {
+        id
+        key
+        size
+        type
+      }
     }
   }
 `;
 
+interface ImageInput {
+  key: string;
+  size: number;
+  type: string;
+}
+
 export const CreateArticle = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { showToast } = useToast();
+  const { getToken } = useAuth();
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+  const [images, setImages] = useState<UploadedImage[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   const {
     register,
@@ -60,39 +76,85 @@ export const CreateArticle = () => {
   });
 
   const { data: categoriesData } = useQuery<GetCategoriesQuery>(GET_CATEGORIES);
+
   const [createArticle, { loading }] = useMutation(CREATE_ARTICLE, {
     onCompleted: () => {
       showToast("記事を投稿しました", "success");
       navigate("/");
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Create article error:", error);
       showToast("記事の投稿に失敗しました", "error");
     },
   });
 
   useEffect(() => {
-    if (!user) {
-      navigate("/login");
-    }
-  }, [user, navigate]);
-
-  useEffect(() => {
     setValue("categoryIds", selectedCategoryIds);
   }, [selectedCategoryIds, setValue]);
 
-  const onSubmit = async (data: CreateArticleFormData) => {
-    if (!user) return;
+  useEffect(() => {
+    // Cleanup preview URLs on unmount
+    return () => {
+      images.forEach((image) => URL.revokeObjectURL(image.preview));
+    };
+  }, []);
 
-    await createArticle({
-      variables: {
-        input: {
-          title: data.title.trim(),
-          content: data.content.trim(),
-          categoryIds: data.categoryIds,
-        },
-      },
-    });
+  const uploadImages = async (): Promise<ImageInput[]> => {
+    const uploadedImages: ImageInput[] = [];
+
+    for (const image of images) {
+      try {
+        const result = await uploadImage(
+          image.file,
+          import.meta.env.VITE_IMAGE_UPLOAD_URL,
+          getToken
+        );
+
+        uploadedImages.push({
+          key: result.key,
+          size: result.size,
+          type: result.type,
+        });
+      } catch (error) {
+        console.error("Failed to upload image:", error);
+        throw new Error(`画像のアップロードに失敗しました: ${image.file.name}`);
+      }
+    }
+
+    return uploadedImages;
   };
+
+  const onSubmit = async (data: CreateArticleFormData) => {
+    setIsUploading(true);
+
+    try {
+      // Upload images first if any
+      const uploadedImages: ImageInput[] =
+        images.length > 0 ? await uploadImages() : [];
+
+      // Create article with uploaded image references
+      await createArticle({
+        variables: {
+          input: {
+            title: data.title.trim(),
+            content: data.content.trim(),
+            categoryIds: data.categoryIds,
+            images: uploadedImages,
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Submit error:", error);
+      showToast(
+        error instanceof Error ? error.message : "記事の投稿に失敗しました",
+        "error"
+      );
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const isSubmitting = loading || isUploading;
 
   return (
     <div className="min-h-screen bg-background px-4 sm:px-6 lg:px-8">
@@ -179,14 +241,26 @@ export const CreateArticle = () => {
                 </p>
               )}
             </Field>
+
+            <ImageUpload
+              images={images}
+              onChange={setImages}
+              maxSize={1}
+              maxCount={10}
+              disabled={isSubmitting}
+            />
           </FieldGroup>
 
           <div className="flex items-center justify-between pt-6">
             <Button type="button" plain onClick={() => navigate("/")}>
               キャンセル
             </Button>
-            <Button type="submit" color="blue" disabled={loading}>
-              {loading ? "投稿中..." : "記事を投稿"}
+            <Button type="submit" color="blue" disabled={isSubmitting}>
+              {isUploading
+                ? "画像をアップロード中..."
+                : loading
+                  ? "記事を投稿中..."
+                  : "記事を投稿"}
             </Button>
           </div>
         </form>

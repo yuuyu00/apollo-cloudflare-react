@@ -30,6 +30,7 @@ model Article {
   updatedAt DateTime @updatedAt
   user User @relation(fields: [userId], references: [id])
   categories Category[]
+  images ImageArticle[]
 }
 
 model Category {
@@ -38,4 +39,15 @@ model Category {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   articles Article[]
+}
+
+model ImageArticle {
+  id Int @default(autoincrement()) @id
+  articleId Int
+  key String
+  size Int
+  type String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  article Article @relation(fields: [articleId], references: [id])
 }

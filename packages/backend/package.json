@@ -5,7 +5,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "wrangler dev --inspector-port 9229",
     "deploy:dev": "pnpm build && wrangler deploy --env dev",
     "deploy:prod": "pnpm build && wrangler deploy --env prod",
     "clean": "rm -rf dist",

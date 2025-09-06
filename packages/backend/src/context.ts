@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { ArticleRepository } from "./repositories/article";
 import { CategoryRepository } from "./repositories/category";
 import { UserRepository } from "./repositories/user";
+import { ImageArticleRepository } from "./repositories/image";
 import { ArticleService } from "./services/article";
 import { CategoryService } from "./services/category";
 import { UserService } from "./services/user";
@@ -17,13 +18,15 @@ export function createContext(
     article: new ArticleRepository(prisma),
     category: new CategoryRepository(prisma),
     user: new UserRepository(prisma),
+    image: new ImageArticleRepository(prisma),
   };
 
   const services = {
     article: new ArticleService(
       repositories.article,
       repositories.user,
-      repositories.category
+      repositories.category,
+      repositories.image
     ),
     category: new CategoryService(repositories.category),
     user: new UserService(repositories.user),

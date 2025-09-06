@@ -1,0 +1,20 @@
+{
+  "name": "@apollo-cloudflare-react/images-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8788 --inspector-port 9230",
+    "deploy:dev": "wrangler deploy --env dev",
+    "deploy:prod": "wrangler deploy --env prod",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@clerk/backend": "^2.12.1",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "@types/uuid": "^9.0.7"
+  }
+}

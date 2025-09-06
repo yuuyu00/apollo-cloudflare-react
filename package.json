@@ -14,6 +14,8 @@
     "type-check": "turbo run type-check",
     "test": "turbo run test",
     "format": "turbo run format",
+    "deploy:dev": "turbo run deploy:dev",
+    "deploy:prod": "turbo run deploy:prod",
     "clean": "rm -rf node_modules .turbo packages/*/node_modules packages/*/dist packages/*/.turbo"
   },
   "devDependencies": {
