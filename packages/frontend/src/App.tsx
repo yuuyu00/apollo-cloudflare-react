@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   createBrowserRouter,
   RouterProvider,
@@ -22,11 +22,11 @@ import {
   CreateArticle,
   SignUpProfile,
 } from "./screens";
+import ImageCacheTest from "./pages/ImageCacheTest";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import { AuthGuard } from "./components/AuthGuard";
 import { EmailConfirmationHandler } from "./components/EmailConfirmationHandler";
-import { ProfileCheckWrapper } from "./components/ProfileCheckWrapper";
 import { Button } from "./components/ui/button";
 import { useAuth } from "./contexts/AuthContext";
 import { PlusIcon } from "@heroicons/react/24/solid";
@@ -79,13 +79,13 @@ const FAB = () => {
 
 const RootLayout = () => {
   return (
-    <ProfileCheckWrapper>
+    <>
       <Header />
       <div className="py-24">
         <Outlet />
       </div>
       <FAB />
-    </ProfileCheckWrapper>
+    </>
   );
 };
 
@@ -98,34 +98,37 @@ if (!CLERK_PUBLISHABLE_KEY) {
 const ApolloProviderWrapper = ({ children }: { children: React.ReactNode }) => {
   const { getToken } = useClerkAuth();
 
-  // Create HTTP link
-  const httpLink = createHttpLink({
-    uri: import.meta.env.VITE_GRAPHQL_ENDPOINT,
-    credentials: "include",
-  });
+  // Memoize Apollo Client to prevent recreation on token updates
+  const apolloClient = useMemo(() => {
+    // Create HTTP link
+    const httpLink = createHttpLink({
+      uri: import.meta.env.VITE_GRAPHQL_ENDPOINT,
+      credentials: "include",
+    });
 
-  // Create auth link to add JWT token to requests
-  const authLink = setContext(async (_, { headers }) => {
-    const token = await getToken();
+    // Create auth link to add JWT token to requests
+    // IMPORTANT: This uses a closure to capture getToken, but doesn't recreate the client
+    const authLink = setContext(async (_, { headers }) => {
+      const token = await getToken();
+      return {
+        headers: {
+          ...headers,
+          authorization: token ? `Bearer ${token}` : "",
+        },
+      };
+    });
 
-    return {
-      headers: {
-        ...headers,
-        authorization: token ? `Bearer ${token}` : "",
+    // Apollo Client with auth context
+    return new ApolloClient({
+      link: authLink.concat(httpLink),
+      cache: new InMemoryCache(),
+      defaultOptions: {
+        watchQuery: {
+          fetchPolicy: "cache-first",
+        },
       },
-    };
-  });
-
-  // Apollo Client with auth context
-  const apolloClient = new ApolloClient({
-    link: authLink.concat(httpLink),
-    cache: new InMemoryCache(),
-    defaultOptions: {
-      watchQuery: {
-        fetchPolicy: "cache-and-network",
-      },
-    },
-  });
+    });
+  }, []); // Empty dependency array - client created only once
 
   return (
     <ApolloProvider client={apolloClient}>
@@ -174,6 +177,10 @@ const router = createBrowserRouter([
       {
         path: "auth/callback",
         element: <EmailConfirmationHandler />,
+      },
+      {
+        path: "image-cache-test",
+        element: <ImageCacheTest />,
       },
       // Protected routes
       {

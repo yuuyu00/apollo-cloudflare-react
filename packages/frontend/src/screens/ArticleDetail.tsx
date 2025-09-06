@@ -1,6 +1,8 @@
 import { useParams, Link } from "react-router";
 import { useQuery } from "@apollo/client";
 import { GET_ARTICLE } from "../graphql/queries/articles";
+import { useState } from "react";
+import { getImageUrl } from "../utils/image";
 
 export const ArticleDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -8,6 +10,9 @@ export const ArticleDetail = () => {
     variables: { id: parseInt(id || "0") },
     skip: !id,
   });
+  const [imageLoadErrors, setImageLoadErrors] = useState<Set<string>>(
+    new Set()
+  );
 
   if (loading) {
     return (
@@ -39,6 +44,10 @@ export const ArticleDetail = () => {
 
   const { article } = data;
 
+  const handleImageError = (key: string) => {
+    setImageLoadErrors((prev) => new Set(prev).add(key));
+  };
+
   return (
     <div className="max-w-4xl mx-auto py-8 pt-20">
       <Link
@@ -67,7 +76,30 @@ export const ArticleDetail = () => {
         </div>
 
         <div className="prose prose-lg max-w-none">
-          <p className="whitespace-pre-wrap">{article.content}</p>
+          <p className="whitespace-pre-wrap mb-8">{article.content}</p>
+
+          {/* Display images if available */}
+          {article.images && article.images.length > 0 && (
+            <div className="mt-8 space-y-6">
+              <h3 className="text-xl font-semibold text-gray-200 mb-4">画像</h3>
+              <div className="grid grid-cols-1 gap-6">
+                {article.images.map(
+                  (image) =>
+                    !imageLoadErrors.has(image.key) && (
+                      <div key={image.id} className="relative group">
+                        <img
+                          src={getImageUrl(image.key, "content")}
+                          alt={`${article.title} - 画像 ${image.id}`}
+                          className="w-full h-auto rounded-lg shadow-lg"
+                          loading="lazy"
+                          onError={() => handleImageError(image.key)}
+                        />
+                      </div>
+                    )
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </article>
     </div>

@@ -10,5 +10,6 @@ generates:
         User: "@prisma/client#User"
         Article: "@prisma/client#Article"
         Category: "@prisma/client#Category"
+        ImageArticle: "@prisma/client#ImageArticle"
       contextType: ./context#Context
       useIndexSignature: true

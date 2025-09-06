@@ -2,6 +2,7 @@ import { Article } from "@prisma/client";
 import { ArticleRepository } from "../repositories/article";
 import { UserRepository } from "../repositories/user";
 import { CategoryRepository } from "../repositories/category";
+import { ImageArticleRepository } from "../repositories/image";
 import { CreateArticleInput, UpdateArticleInput } from "../gqlTypes";
 import { notFoundError, validationError, forbiddenError } from "../errors";
 
@@ -9,7 +10,8 @@ export class ArticleService {
   constructor(
     private articleRepo: ArticleRepository,
     private userRepo: UserRepository,
-    private categoryRepo: CategoryRepository
+    private categoryRepo: CategoryRepository,
+    private imageRepo: ImageArticleRepository
   ) {}
 
   async getArticle(id: number): Promise<Article> {
@@ -24,11 +26,7 @@ export class ArticleService {
     take?: number;
     skip?: number;
   }): Promise<Article[]> {
-    return this.articleRepo.findMany({
-      orderBy: { id: "desc" },
-      take: args?.take,
-      skip: args?.skip,
-    });
+    return this.articleRepo.findMany();
   }
 
   async getArticlesByAuthor(authorId: number): Promise<Article[]> {
@@ -63,7 +61,7 @@ export class ArticleService {
       }
     }
 
-    return this.articleRepo.create({
+    const article = await this.articleRepo.create({
       title: input.title,
       content: input.content,
       user: {
@@ -75,6 +73,19 @@ export class ArticleService {
           }
         : undefined,
     });
+
+    if (input.images && input.images.length > 0) {
+      await this.imageRepo.createMany(
+        input.images.map((image) => ({
+          articleId: article.id,
+          key: image.key,
+          size: image.size,
+          type: image.type,
+        }))
+      );
+    }
+
+    return article;
   }
 
   async updateArticle(

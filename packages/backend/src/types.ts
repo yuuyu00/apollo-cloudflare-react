@@ -1,5 +1,6 @@
 export interface Env {
   DB: D1Database;
+  CACHE_KV: KVNamespace;
   CLERK_SECRET_KEY: string;
   CLERK_PUBLISHABLE_KEY: string;
   CLERK_PEM_PUBLIC_KEY: string;

@@ -4,12 +4,14 @@ type Article {
   content: String!
   user: User!
   categories: [Category!]!
+  images: [ImageArticle!]!
 }
 
 input CreateArticleInput {
   title: String!
   content: String!
   categoryIds: [Int!]!
+  images: [ImageInput!]
 }
 
 input UpdateArticleInput {

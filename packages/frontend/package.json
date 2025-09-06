@@ -12,6 +12,7 @@
     "generate": "graphql-codegen",
     "codegen-watch": "graphql-codegen --watch",
     "type-check": "tsc --noEmit",
+    "types": "wrangler types",
     "clean": "rm -rf dist",
     "deploy:dev": "pnpm run clean && vite build --mode staging && wrangler deploy --env dev",
     "deploy:prod": "pnpm run clean && vite build --mode production && wrangler deploy --env prod"
