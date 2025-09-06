@@ -28,9 +28,9 @@ jobs:
         env:
           DATABASE_URL: "file:./dev.db"
         run: |
-          # First generate backend schema
-          pnpm --filter @apollo-cloudflare-react/backend generate
-          # Then build all packages (frontend can now find schema.gql)
+          # Generate all packages (backend first, then frontend)
+          pnpm generate
+          # Build all packages
           pnpm build
 
       - name: Setup wrangler.jsonc files with account ID
