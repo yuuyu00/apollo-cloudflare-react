@@ -13,10 +13,6 @@
       "cache": false,
       "outputs": ["src/gqlTypes.ts", "src/schema.ts", "schema/schema.gql", "src/generated-graphql/**"]
     },
-    "generate:ci": {
-      "cache": false,
-      "outputs": ["src/gqlTypes.ts", "src/schema.ts", "schema/schema.gql"]
-    },
     "type-check": {
       "dependsOn": ["^type-check", "generate"]
     },

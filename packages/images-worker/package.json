@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --port 8788 --inspector-port 9230",
+    "build": "tsc --noEmit",
     "deploy:dev": "wrangler deploy --env dev",
     "deploy:prod": "wrangler deploy --env prod",
     "type-check": "tsc --noEmit",
