@@ -6,23 +6,25 @@
   "scripts": {
     "dev": "concurrently 'vite' 'pnpm codegen-watch'",
     "dev:worker": "wrangler dev --port 3001",
-    "build": "pnpm run generate && tsc && vite build",
+    "build": "tsc && vite build",
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "generate": "graphql-codegen",
     "codegen-watch": "graphql-codegen --watch",
     "type-check": "tsc --noEmit",
+    "types": "wrangler types",
     "clean": "rm -rf dist",
-    "deploy:dev": "pnpm run clean && pnpm run generate && tsc && vite build --mode staging && wrangler deploy",
-    "deploy:prod": "pnpm run clean && pnpm build && wrangler deploy --env production"
+    "deploy:dev": "pnpm run clean && vite build --mode staging && wrangler deploy --env dev",
+    "deploy:prod": "pnpm run clean && vite build --mode production && wrangler deploy --env prod"
   },
   "dependencies": {
     "@apollo/client": "^3.13.8",
+    "@clerk/clerk-react": "^5.45.0",
     "@graphql-codegen/cli": "^5.0.7",
     "@graphql-codegen/client-preset": "^4.8.2",
     "@headlessui/react": "^2.2.4",
     "@heroicons/react": "^2.2.0",
-    "@supabase/supabase-js": "^2.50.0",
+    "@hookform/resolvers": "^5.2.1",
     "@tailwindcss/forms": "^0.5.10",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^14.3.1",
@@ -32,7 +34,9 @@
     "graphql": "^16.11.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router": "^7.0.2"
+    "react-hook-form": "^7.62.0",
+    "react-router": "^7.0.2",
+    "zod": "^3.25.64"
   },
   "devDependencies": {
     "@graphql-typed-document-node/core": "^3.2.0",

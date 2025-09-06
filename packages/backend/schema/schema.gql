@@ -4,12 +4,14 @@ type Article {
   content: String!
   user: User!
   categories: [Category!]!
+  images: [ImageArticle!]!
 }
 
 input CreateArticleInput {
   title: String!
   content: String!
   categoryIds: [Int!]!
+  images: [ImageInput!]
 }
 
 input UpdateArticleInput {
@@ -54,6 +56,22 @@ extend type Mutation {
   createCategory(input: CreateCategoryInput!): Category!
   updateCategory(input: UpdateCategoryInput!): Category!
   deleteCategory(id: Int!): Boolean!
+}
+
+type ImageArticle {
+  id: Int!
+  articleId: Int!
+  key: String!
+  size: Int!
+  type: String!
+  createdAt: String!
+  updatedAt: String!
+}
+
+input ImageInput {
+  key: String!
+  size: Int!
+  type: String!
 }
 
 type Query {

@@ -23,4 +23,15 @@ export const Article: ArticleResolvers = {
 
     return user;
   },
+  images: async (parent, {}, { prisma }) => {
+    const images = await prisma.article
+      .findUnique({ where: { id: parent.id } })
+      .images();
+
+    if (images === null) {
+      return [];
+    }
+
+    return images;
+  },
 };

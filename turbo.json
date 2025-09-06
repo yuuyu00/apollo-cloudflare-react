@@ -13,12 +13,12 @@
       "cache": false,
       "outputs": ["src/gqlTypes.ts", "src/schema.ts", "schema/schema.gql", "src/generated-graphql/**"]
     },
-    "generate:ci": {
-      "cache": false,
-      "outputs": ["src/gqlTypes.ts", "src/schema.ts", "schema/schema.gql"]
-    },
     "type-check": {
       "dependsOn": ["^type-check", "generate"]
+    },
+    "types": {
+      "cache": false,
+      "outputs": ["worker-configuration.d.ts"]
     },
     "lint": {
       "dependsOn": ["^lint"]
@@ -32,11 +32,13 @@
     },
     "deploy:dev": {
       "dependsOn": ["build"],
-      "cache": false
+      "cache": false,
+      "env": ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"]
     },
     "deploy:prod": {
       "dependsOn": ["build"],
-      "cache": false
+      "cache": false,
+      "env": ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"]
     },
     "d1:migrations:apply": {
       "cache": false

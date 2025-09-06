@@ -1,333 +1,553 @@
-# Apollo Cloudflare React Stack - プロジェクト情報
+# Apollo Cloudflare React Stack - Project Information
 
-このドキュメントは、プロジェクトの構成、開発手順、よく使うコマンドをまとめたものです。
+This document consolidates the project configuration, development procedures, and frequently used commands.
 
-## プロジェクト概要
+## CRITICAL: Multi-Agent Task Decomposition Strategy
 
-- **技術スタック**:
+### MANDATORY: When to Use Multiple Agents
+
+You MUST automatically decompose tasks and use multiple specialized agents when:
+
+- Task spans multiple layers (infrastructure, backend, frontend)
+- Creating new packages or workers
+- Implementing features requiring database, API, and UI changes
+- Task involves both configuration and implementation
+
+### Agent Responsibility Matrix
+
+#### infra-devops-developer
+
+**MUST USE FOR:**
+
+- Creating new Worker packages or any new packages under `packages/`
+- Configuring `wrangler.jsonc`, `package.json`, `tsconfig.json`
+- Setting up environment variables, build scripts, deployment configs
+- Turborepo/pnpm workspace configuration
+- R2 bucket, D1 database, or other Cloudflare service setup
+
+#### backend-developer
+
+**MUST USE FOR:**
+
+- Prisma schema modifications
+- D1 migrations creation and application
+- GraphQL schema definitions (`.gql` files)
+- Repository pattern implementations
+- Service layer business logic
+- Resolver implementations
+- Authentication/authorization logic
+
+#### frontend-developer
+
+**MUST USE FOR:**
+
+- React component creation
+- UI implementation with Catalyst UI Kit
+- GraphQL client integration (Apollo Client)
+- Form implementation (React Hook Form + Zod)
+- State management
+- Frontend routing
+- Frontend environment variables
+
+#### Reviewers & Validators
+
+**MUST USE AFTER IMPLEMENTATION:**
+
+- backend-reviewer: After backend changes
+- frontend-reviewer: After frontend changes
+- e2e-system-validator: After cross-package features
+
+### Task Decomposition Template
+
+When receiving a complex task, IMMEDIATELY decompose it as follows:
+
+```yaml
+# Example: "Add image upload feature"
+development_phase_1:
+  - agent: infra-devops-developer
+    tasks: [create_worker_package, configure_r2]
+  - agent: backend-developer
+    tasks: [update_database_schema, create_migrations]
+  - agent: frontend-developer
+    tasks: [create_ui_components]
+
+review_phase_1:
+  - agent: infra-devops-reviewer
+    tasks: [review_worker_config]
+    depends_on: [infra-devops-developer]
+  - agent: backend-reviewer
+    tasks: [review_schema_changes]
+    depends_on: [backend-developer]
+  - agent: frontend-reviewer
+    tasks: [review_components]
+    depends_on: [frontend-developer]
+
+development_phase_2:
+  - agent: backend-developer
+    tasks: [implement_graphql_api]
+    depends_on: [review_phase_1]
+  - agent: frontend-developer
+    tasks: [integrate_with_api]
+    depends_on: [review_phase_1]
+
+review_phase_2:
+  - agent: backend-reviewer
+    tasks: [review_api_implementation]
+    depends_on: [backend-developer_phase_2]
+  - agent: frontend-reviewer
+    tasks: [review_integration]
+    depends_on: [frontend-developer_phase_2]
+
+validation_phase_final:
+  - agent: e2e-system-validator
+    tasks: [verify_integration]
+    depends_on: [review_phase_2]
+```
+
+### Execution Rules
+
+1. **PARALLEL EXECUTION**: Always run independent tasks in parallel
+2. **TASK GRANULARITY**: Each agent task should complete in <30 minutes
+3. **EXPLICIT DEPENDENCIES**: Clearly define task dependencies
+4. **ARTIFACT SHARING**: Agents communicate through created files/configs
+5. **NO SINGLE-AGENT COMPLEX TASKS**: Never assign multi-layer tasks to one agent
+6. **MANDATORY CODE REVIEW**: After ANY developer agent completes work, the corresponding reviewer MUST be invoked:
+   - `backend-developer` → `backend-reviewer` (REQUIRED)
+   - `frontend-developer` → `frontend-reviewer` (REQUIRED)
+   - `infra-devops-developer` → `infra-devops-reviewer` (REQUIRED)
+   - Reviews must occur BEFORE proceeding to next phase
+   - Never skip review phase even for minor changes
+
+### Common Patterns to ALWAYS Decompose
+
+1. **New Feature Implementation**
+
+   - infra: Package/config setup
+   - backend: API implementation
+   - frontend: UI implementation
+   - validator: Integration testing
+
+2. **New Worker Creation**
+
+   - infra: Package creation, wrangler config
+   - backend: Business logic (if needed)
+   - frontend: Environment variable updates
+
+3. **Database Changes**
+   - backend: Schema updates, migrations
+   - backend: Repository/Service updates
+   - frontend: GraphQL query updates
+
+### Anti-Patterns to AVOID
+
+❌ Assigning entire feature to backend-developer
+❌ Sequential execution of independent tasks
+❌ Vague task descriptions like "implement everything"
+❌ Skipping validation agents after implementation
+
+### AUTOMATIC DECOMPOSITION TRIGGER
+
+When user request contains ANY of these keywords, MUST decompose:
+
+- "feature", "implement", "add", "create worker"
+- "upload", "authentication", "CRUD"
+- Tasks mentioning both "backend" and "frontend"
+- Tasks requiring new packages or services
+
+### SPECIAL KEYWORD: "use-agents" - Orchestrated Multi-Agent Execution
+
+When user includes "use-agents" in their request, follow this MANDATORY workflow:
+
+1. **PLANNING PHASE** (You do this first):
+
+   - Analyze the complete requirements
+   - Create detailed implementation plan
+   - Identify all necessary components
+   - Map tasks to appropriate agents
+   - Define dependencies and execution order
+   - Present the plan to user in structured format
+
+2. **TASK DECOMPOSITION** (After plan approval):
+
+   ```yaml
+   execution_plan:
+     phase_1_parallel:
+       - agent: infra-devops-developer
+         tasks: [specific_task_1, specific_task_2]
+         deliverables: [file_1, config_1]
+       - agent: backend-developer
+         tasks: [specific_task_3, specific_task_4]
+         deliverables: [schema_1, migration_1]
+
+     phase_2_sequential:
+       - agent: frontend-developer
+         tasks: [specific_task_5]
+         depends_on: [phase_1.deliverables]
+         deliverables: [component_1, integration_1]
+
+     phase_3_validation:
+       - agent: e2e-system-validator
+         tasks: [integration_test, requirements_verification]
+         depends_on: [all_previous_phases]
+   ```
+
+3. **EXECUTION** (Launch agents with specific instructions):
+
+   - Each agent receives ONLY their specific tasks
+   - Include context from previous phases
+   - Specify expected deliverables
+   - Set clear success criteria
+
+4. **ORCHESTRATION BENEFITS**:
+   - User visibility into execution plan
+   - Optimal parallelization
+   - Clear accountability per agent
+   - Traceable deliverables
+   - Coordinated error handling
+
+**Example Usage**: "use-agents to implement user profile picture upload with image optimization"
+
+This triggers:
+
+1. First, present complete plan to user
+2. Upon approval, execute via multiple specialized agents
+3. Coordinate results and validate integration
+
+---
+
+## Project Overview
+
+- **Technology Stack**:
   - Backend: Apollo Server on Cloudflare Workers + D1
   - Frontend: React SPA on Cloudflare Workers (Static Assets)
-  - Auth: Supabase Auth
-- **モノレポ管理**: Turborepo + pnpm workspaces
-- **パッケージマネージャー**: pnpm v8.14.0
-- **Node.jsバージョン**: v22.11.0 (LTS)
-- **Wranglerバージョン**: v4.20.0（重要：v4対応済み）
+  - Auth: Clerk Auth
+- **Monorepo Management**: Turborepo + pnpm workspaces
+- **Package Manager**: pnpm v8.14.0
+- **Node.js Version**: v22.11.0 (LTS)
+- **Wrangler Version**: v4.20.0 (IMPORTANT: v4 compatible)
 
-## ディレクトリ構成
+## Directory Structure
 
 ```
 apollo-cloudflare-react/
 ├── packages/
 │   ├── backend/          # Apollo Server (Cloudflare Workers)
 │   │   ├── src/
-│   │   │   ├── index.ts         # Cloudflare Workersエントリーポイント
-│   │   │   ├── schema.ts        # GraphQLスキーマ（自動生成）
-│   │   │   ├── db.ts           # Prisma D1設定
-│   │   │   ├── auth.ts         # JWT認証
-│   │   │   ├── types.ts        # 共通型定義
-│   │   │   ├── domain/         # ドメイン層（クリーンアーキテクチャ）
-│   │   │   │   ├── entities/   # ドメインエンティティ
-│   │   │   │   ├── errors/     # カスタムエラークラス
-│   │   │   │   └── repositories/ # リポジトリインターフェース
-│   │   │   ├── application/    # アプリケーション層
-│   │   │   │   └── usecases/   # ユースケース（ビジネスロジック）
-│   │   │   ├── infrastructure/ # インフラストラクチャ層
-│   │   │   │   ├── container.ts # DIコンテナ
-│   │   │   │   └── repositories/ # リポジトリ実装（Prisma）
-│   │   │   └── resolvers/      # GraphQLリゾルバー
+│   │   │   ├── index.ts         # Cloudflare Workers entry point
+│   │   │   ├── schema.ts        # GraphQL schema (auto-generated)
+│   │   │   ├── db.ts           # Prisma D1 configuration
+│   │   │   ├── auth.ts         # JWT authentication (Clerk Auth)
+│   │   │   ├── context.ts      # GraphQL context
+│   │   │   ├── types.ts        # Common type definitions
+│   │   │   ├── gqlTypes.ts     # GraphQL type definitions (auto-generated)
+│   │   │   ├── repositories/   # Data access layer
+│   │   │   │   ├── article.ts  # ArticleRepository
+│   │   │   │   ├── category.ts # CategoryRepository
+│   │   │   │   └── user.ts     # UserRepository
+│   │   │   ├── services/       # Business logic layer
+│   │   │   │   ├── article.ts  # ArticleService
+│   │   │   │   ├── category.ts # CategoryService
+│   │   │   │   └── user.ts     # UserService
+│   │   │   ├── errors/         # Common error definitions
+│   │   │   │   └── index.ts    # GraphQL Error extensions
+│   │   │   └── resolvers/      # GraphQL resolvers
+│   │   │       ├── queries/    # Query resolvers
+│   │   │       ├── mutations/  # Mutation resolvers
+│   │   │       └── trivials/   # Field resolvers (lazy loading relations)
 │   │   ├── prisma/
-│   │   │   └── schema.prisma    # Prismaスキーマ
-│   │   ├── migrations/          # D1マイグレーション
+│   │   │   └── schema.prisma    # Prisma schema
+│   │   ├── migrations/          # D1 migrations
 │   │   │   └── 0001_init.sql
-│   │   ├── schema/              # GraphQLスキーマ定義
+│   │   ├── schema/              # GraphQL schema definitions
 │   │   │   └── *.gql
-│   │   ├── scripts/             # ビルドスクリプト
+│   │   ├── scripts/             # Build scripts
 │   │   │   └── generate-schema.js
-│   │   ├── wrangler.toml        # Wrangler v4設定
-│   │   ├── .dev.vars           # ローカル開発用環境変数
-│   │   └── .env                # Prisma CLI用設定
+│   │   ├── wrangler.jsonc        # Wrangler v4 configuration
+│   │   ├── .dev.vars           # Local development environment variables
+│   │   └── .env                # Prisma CLI configuration
 │   └── frontend/                # React + Vite (Cloudflare Workers Static Assets)
 │       ├── src/
-│       ├── wrangler.toml        # Workers設定
-│       ├── .env                # ローカル開発用
-│       ├── .env.development     # 開発環境デプロイ用
-│       └── .env.production      # 本番環境デプロイ用
-├── turbo.json                   # Turborepo設定
-├── pnpm-workspace.yaml          # pnpm workspaces設定
-├── .npmrc                       # pnpm設定
-├── CLAUDE.md                    # プロジェクトドキュメント
-└── CLOUDFLARE_MIGRATION_TODO.md # 移行計画
+│       ├── wrangler.jsonc        # Workers configuration
+│       ├── .env                # Local development
+│       ├── .env.development     # Development deployment
+│       └── .env.production      # Production deployment
+├── turbo.json                   # Turborepo configuration
+├── pnpm-workspace.yaml          # pnpm workspaces configuration
+├── .npmrc                       # pnpm configuration
+├── CLAUDE.md                    # Project documentation
+└── CLOUDFLARE_MIGRATION_TODO.md # Migration plan
 ```
 
-## セットアップ手順
+## Setup Instructions
 
-### 1. 依存関係のインストール
+### 1. Install Dependencies
 
 ```bash
 pnpm install
 ```
 
-### 2. 環境変数の設定
+### 2. Configure Environment Variables
 
 **Backend (.env)**
 
 ```bash
 # packages/backend/.env
-DATABASE_URL="file:./dev.db"  # Prisma CLI用のダミーURL
+DATABASE_URL="file:./dev.db"  # Dummy URL for Prisma CLI
 ```
 
 **Backend (.dev.vars)**
 
 ```bash
 # packages/backend/.dev.vars
-SUPABASE_URL=your-supabase-url
-SUPABASE_ANON_KEY=your-supabase-anon-key
-SUPABASE_JWT_SECRET=your-supabase-jwt-secret
+CLERK_SECRET_KEY=sk_test_xxxxxxxxxxxxx
+CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxx
+CLERK_PEM_PUBLIC_KEY=-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQE...\n-----END PUBLIC KEY-----
 GRAPHQL_INTROSPECTION=true
 GRAPHQL_PLAYGROUND=true
-CORS_ORIGIN=http://localhost:3000
+CORS_ORIGIN=http://localhost:5000
 ```
 
-**Frontend 環境変数設定**
+**Note**: CLERK_PEM_PUBLIC_KEY is obtained from Clerk Dashboard > API Keys > Show JWT Public Key > PEM Public Key.
 
-Viteは以下の優先順位で環境変数ファイルを読み込みます：
-1. `.env.local` - すべての環境で最優先（gitignore対象）
-2. `.env.[mode]` - 特定のモード用（例: .env.development）
-3. `.env` - デフォルトの設定
+**Frontend Environment Variables**
+
+Vite loads environment variable files in the following priority:
+
+1. `.env.local` - Highest priority in all environments (gitignored)
+2. `.env.[mode]` - Mode-specific files (e.g., .env.development)
+3. `.env` - Default settings
 
 **Frontend (.env)**
 
 ```bash
 # packages/frontend/.env
-# デフォルト設定（ローカル開発用）
+# Default settings (local development)
 VITE_GRAPHQL_ENDPOINT=http://localhost:8787/graphql
-VITE_SUPABASE_URL=your-supabase-url
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxx
 ```
 
 **Frontend (.env.development)**
 
 ```bash
 # packages/frontend/.env.development
-# 開発環境デプロイ用（pnpm deploy:dev）
+# For development deployment (pnpm deploy:dev)
 VITE_GRAPHQL_ENDPOINT=https://apollo-cloudflare-api.your-subdomain.workers.dev/graphql
-VITE_SUPABASE_URL=your-supabase-url
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxx
 ```
 
 **Frontend (.env.production)**
 
 ```bash
 # packages/frontend/.env.production
-# 本番環境デプロイ用（pnpm deploy:prod）
+# For production deployment (pnpm deploy:prod)
 VITE_GRAPHQL_ENDPOINT=https://apollo-cloudflare-api-prod.your-subdomain.workers.dev/graphql
-VITE_SUPABASE_URL=your-supabase-url
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxx
 ```
 
 **Frontend (.env.local)**
 
 ```bash
-# packages/frontend/.env.local（オプション）
-# ローカル開発でデフォルト設定を上書きしたい場合
-# このファイルは.gitignoreに含まれるため、個人設定に最適
+# packages/frontend/.env.local (optional)
+# Override default settings in local development
+# This file is gitignored, ideal for personal settings
 VITE_GRAPHQL_ENDPOINT=http://localhost:8787/graphql
 ```
 
-### 3. D1データベースのセットアップ
+### 3. D1 Database Setup
 
 ```bash
-# D1データベースの作成（初回のみ）
+# Create D1 database (first time only)
 cd packages/backend
 pnpm wrangler d1 create apollo-cloudflare-db
 
-# wrangler.tomlのdatabase_idを更新（作成時に表示されたIDを使用）
+# Update database_id in wrangler.jsonc with the ID displayed during creation
 # database_id = "c370ca69-c11d-4d00-9fd0-b7339850fd30"
 
-# マイグレーションの状況確認
-pnpm d1:migrations:list                     # ローカルの未適用マイグレーション
-pnpm d1:migrations:list:remote              # リモート（本番）の未適用マイグレーション
+# Check migration status
+pnpm d1:migrations:list                     # Unapplied local migrations
+pnpm d1:migrations:list:remote              # Unapplied remote (production) migrations
 
-# マイグレーションの適用
-pnpm d1:migrations:apply                    # ローカルに適用
-pnpm d1:migrations:apply:remote             # リモート（本番）に適用
+# Apply migrations
+pnpm d1:migrations:apply                    # Apply to local
+pnpm d1:migrations:apply:remote             # Apply to remote (production)
 
-# テーブルの確認
-pnpm d1:execute --command "SELECT name FROM sqlite_master WHERE type='table';"  # ローカル
-pnpm d1:execute:remote --command "SELECT name FROM sqlite_master WHERE type='table';"  # リモート
+# Verify tables
+pnpm d1:execute --command "SELECT name FROM sqlite_master WHERE type='table';"  # Local
+pnpm d1:execute:remote --command "SELECT name FROM sqlite_master WHERE type='table';"  # Remote
 ```
 
-## よく使うコマンド
+## Common Commands
 
-### 開発
+### Development
 
 ```bash
-# 全体の開発サーバー起動
+# Start all development servers
 pnpm dev
 
-# Backend (Cloudflare Workers) のみ起動
+# Start Backend (Cloudflare Workers) only
 cd packages/backend && pnpm dev
 
-# Frontend のみ起動
+# Start Frontend only
 cd packages/frontend && pnpm dev
 
-# Frontend Worker のローカルテスト（ポート3001）
+# Test Frontend Worker locally (port 3001)
 cd packages/frontend && pnpm dev:worker
 ```
 
-### ビルド・型チェック
+### Build & Type Check
 
 ```bash
-# ビルド
+# Build
 pnpm build
 
-# 型チェック
+# Type check
 pnpm type-check
 
-# リント
+# Lint
 pnpm lint
 
-# フォーマット
+# Format
 pnpm format
 ```
 
-### コード生成
+### Code Generation
 
 ```bash
-# GraphQL型定義とPrismaクライアントの生成（ルートから）
+# Generate GraphQL types and Prisma client (from root)
 pnpm generate
 
-# Backend の生成処理
+# Backend generation process
 cd packages/backend
-pnpm generate  # 以下を実行:
-# 1. pnpm generate:prisma    - Prismaクライアント生成
-# 2. pnpm generate:codegen   - GraphQL型定義生成
-# 3. pnpm generate:schema    - schema.ts生成（Workers用）
+pnpm generate  # Runs the following:
+# 1. pnpm generate:prisma    - Generate Prisma client
+# 2. pnpm generate:codegen   - Generate GraphQL types
+# 3. pnpm generate:schema    - Generate schema.ts (for Workers)
 
-# Frontend の生成処理
+# Frontend generation process
 cd packages/frontend
-pnpm generate  # GraphQLクライアントコード生成
+pnpm generate  # Generate GraphQL client code
 ```
 
-**注意**: Frontend の codegen は Backend の `schema/schema.gql` を直接参照するため、Backend で先に `pnpm generate` を実行する必要があります。
+**Note**: Frontend codegen directly references Backend's `schema/schema.gql`, so you must run `pnpm generate` in Backend first.
 
-### データベース操作
+### Database Operations
 
 ```bash
 cd packages/backend
 
-# Prismaスキーマからクライアント生成
+# Generate client from Prisma schema
 pnpm prisma generate
 
-# D1マイグレーション関連（package.jsonのスクリプトを使用）
-pnpm d1:migrations:create <migration_name>  # 新規マイグレーション作成
-pnpm d1:migrations:list                     # ローカルの未適用マイグレーション一覧
-pnpm d1:migrations:list:remote              # リモート（本番）の未適用マイグレーション一覧
-pnpm d1:migrations:apply                    # ローカルに適用
-pnpm d1:migrations:apply:remote             # リモート（本番）に適用
+# D1 migration commands (using package.json scripts)
+pnpm d1:migrations:create <migration_name>  # Create new migration
+pnpm d1:migrations:list                     # List unapplied local migrations
+pnpm d1:migrations:list:remote              # List unapplied remote (production) migrations
+pnpm d1:migrations:apply                    # Apply to local
+pnpm d1:migrations:apply:remote             # Apply to remote (production)
 
-# D1マイグレーションのフラグ説明：
-# - フラグなし・--local（デフォルト）: ローカルDB（wrangler devで使用）に対して実行
-# - --remote: リモートの本番DBに対して実行
+# D1 migration flags explained:
+# - No flag or --local (default): Execute against local DB (used by wrangler dev)
+# - --remote: Execute against remote production DB
 
-# SQLの実行
-pnpm d1:execute --file ./migrations/0001_init.sql           # ローカルでファイル実行
-pnpm d1:execute --command "SELECT * FROM User;"             # ローカルでコマンド実行
-pnpm d1:execute:remote --file ./migrations/0001_init.sql    # リモートでファイル実行
-pnpm d1:execute:remote --command "SELECT * FROM User;"      # リモートでコマンド実行
+# Execute SQL
+pnpm d1:execute --file ./migrations/0001_init.sql           # Execute file locally
+pnpm d1:execute --command "SELECT * FROM User;"             # Execute command locally
+pnpm d1:execute:remote --file ./migrations/0001_init.sql    # Execute file remotely
+pnpm d1:execute:remote --command "SELECT * FROM User;"      # Execute command remotely
 
-# データベース情報の確認
+# Check database info
 pnpm wrangler d1 info apollo-cloudflare-db
 ```
 
-### D1ローカルデータベースの確認方法
+### Inspecting D1 Local Database
 
-Prisma StudioはD1を直接サポートしていませんが、以下の方法でデータを確認できます：
+While Prisma Studio doesn't directly support D1, you can inspect data using these methods:
 
-#### 1. Wrangler D1コマンド（推奨）
+#### 1. Wrangler D1 Commands (Recommended)
 
 ```bash
 cd packages/backend
 
-# 便利なスクリプトでデータ確認
-pnpm d1:show:users      # ユーザー一覧
-pnpm d1:show:articles   # 記事一覧（著者名付き）
-pnpm d1:show:categories # カテゴリー一覧
-pnpm d1:show:tables     # テーブル一覧
+# Convenient scripts for data inspection
+pnpm d1:show:users      # List users
+pnpm d1:show:articles   # List articles with author names
+pnpm d1:show:categories # List categories
+pnpm d1:show:tables     # List tables
 
-# 任意のSQLクエリを実行
+# Execute arbitrary SQL queries
 pnpm d1:execute --command "SELECT * FROM User WHERE email LIKE '%@example.com';"
 ```
 
-#### 2. SQLiteツールで直接確認
+#### 2. Direct SQLite Tool Access
 
-D1のローカルデータベースはSQLiteファイルとして保存されています：
+D1 local databases are stored as SQLite files:
 
 ```bash
-# データベースファイルの場所を確認
+# Find database file location
 find .wrangler -name "*.sqlite" -type f
 
-# SQLite CLIで開く（例）
+# Open with SQLite CLI (example)
 sqlite3 .wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite
 
-# SQLiteコマンド例
-.tables              # テーブル一覧
-.schema User         # Userテーブルのスキーマ
-SELECT * FROM User;  # データ確認
-.quit               # 終了
+# SQLite commands
+.tables              # List tables
+.schema User         # Show User table schema
+SELECT * FROM User;  # View data
+.quit               # Exit
 ```
 
-#### 3. GUI SQLiteツール
+#### 3. GUI SQLite Tools
 
-以下のツールでSQLiteファイルを開いて視覚的に確認できます：
-- **TablePlus**（macOS/Windows/Linux）
-- **DB Browser for SQLite**（無料）
-- **VS Code拡張機能**: SQLite Viewer
+Open SQLite files visually with:
 
-#### 4. Prisma Studio（推奨）
+- **TablePlus** (macOS/Windows/Linux)
+- **DB Browser for SQLite** (Free)
+- **VS Code Extension**: SQLite Viewer
 
-D1データベースでもPrisma Studioが使用できます：
+#### 4. Prisma Studio (Recommended)
+
+D1 databases can be used with Prisma Studio:
 
 ```bash
 cd packages/backend
 
-# Prisma Studioを起動
+# Start Prisma Studio
 pnpm prisma-studio
 
-# ブラウザで http://localhost:5555 を開く
+# Open http://localhost:5555 in browser
 ```
 
-**注意**: 
-- 事前に`pnpm dev`でD1データベースを初期化しておく必要があります
-- Prisma Studioを使用中は、データベースファイルがロックされる可能性があります
+**Note**:
 
-### デプロイ
+- D1 database must be initialized with `pnpm dev` beforehand
+- Database file may be locked while Prisma Studio is running
+
+### Deployment
 
 #### Backend (Apollo Server)
 
 ```bash
 cd packages/backend
 
-# ローカル開発サーバー（http://localhost:8787）
-pnpm dev  # または pnpm wrangler dev
+# Local development server (http://localhost:8787)
+pnpm dev  # or pnpm wrangler dev
 
-# デプロイ（開発環境）
-pnpm deploy:dev  # または pnpm wrangler deploy
+# Deploy to development
+pnpm deploy:dev  # or pnpm wrangler deploy
 
-# デプロイ（本番環境）
-pnpm deploy:prod  # または pnpm wrangler deploy --env production
+# Deploy to production
+pnpm deploy:prod  # or pnpm wrangler deploy --env production
 
-# シークレット環境変数の設定
-pnpm wrangler secret put SUPABASE_JWT_SECRET
-pnpm wrangler secret put SUPABASE_URL
-pnpm wrangler secret put SUPABASE_ANON_KEY
+# Set secret environment variables
+pnpm wrangler secret put CLERK_SECRET_KEY
+pnpm wrangler secret put CLERK_PEM_PUBLIC_KEY
 
-# ログの確認
+# Check logs
 pnpm wrangler tail
 
-# Workers の設定確認
-pnpm wrangler whoami      # ログイン状態確認
-pnpm wrangler config list  # 設定一覧
+# Workers configuration checks
+pnpm wrangler whoami      # Check login status
+pnpm wrangler config list  # List configurations
 ```
 
 #### Frontend (React SPA)
@@ -335,194 +555,212 @@ pnpm wrangler config list  # 設定一覧
 ```bash
 cd packages/frontend
 
-# デプロイ（開発環境）
-pnpm deploy:dev   # .env.developmentを使用してビルド
+# Deploy to development
+pnpm deploy:dev   # Uses .env.development for build
 
-# デプロイ（本番環境）
-pnpm deploy:prod  # .env.productionを使用してビルド
+# Deploy to production
+pnpm deploy:prod  # Uses .env.production for build
 
-# デプロイURL
-# 開発: https://apollo-cloudflare-frontend.your-subdomain.workers.dev
-# 本番: https://apollo-cloudflare-frontend-prod.your-subdomain.workers.dev
+# Deployment URLs
+# Development: https://apollo-cloudflare-frontend.your-subdomain.workers.dev
+# Production: https://apollo-cloudflare-frontend-prod.your-subdomain.workers.dev
 ```
 
-## Wrangler v4 対応について
+## Wrangler v4 Compatibility
 
-### 重要な変更点
+### Important Changes
 
 1. **node_compat → nodejs_compat**
 
-   - `node_compat = true` は廃止
-   - `compatibility_flags = ["nodejs_compat"]` を使用
+   - `node_compat = true` is deprecated
+   - Use `compatibility_flags = ["nodejs_compat"]`
 
-2. **削除された設定**
+2. **Removed Settings**
 
-   - `[upload]` セクション
+   - `[upload]` section
    - `[build].watch_paths`
-   - `[tsconfig]` セクション（tsconfig.jsonで管理）
+   - `[tsconfig]` section (managed in tsconfig.json)
 
-3. **エントリーポイント**
+3. **Entry Point**
 
-   - `src/index.ts` が必須（Cloudflare Workers形式）
-   - Express形式の `server.ts` は使用不可
-   - `export default` で fetch ハンドラーをエクスポート
+   - `src/index.ts` is required (Cloudflare Workers format)
+   - Express-style `server.ts` cannot be used
+   - Must `export default` fetch handler
 
-4. **Apollo Server統合**
-   - `@as-integrations/cloudflare-workers` を使用
-   - Prisma D1 Adapter でデータベース接続
+4. **Apollo Server Integration**
+   - Uses `@as-integrations/cloudflare-workers`
+   - Database connection via Prisma D1 Adapter
 
-## Turborepo設定
+## Turborepo Configuration
 
-このプロジェクトはTurborepo v2 + pnpm workspacesを使用してモノレポを管理しています。
+This project manages the monorepo using Turborepo v2 + pnpm workspaces.
 
-### 主要なタスク（turbo.json）
+### Main Tasks (turbo.json)
 
-- **build**: 依存関係を含めて全パッケージをビルド
-- **dev**: 開発サーバーを起動（キャッシュ無効、永続実行）
-- **generate**: GraphQLスキーマとコード生成
-- **type-check**: 型チェック（generateタスクに依存）
-- **lint**: コードのリンティング
-- **deploy:dev/prod**: デプロイメント（buildに依存）
+- **build**: Build all packages including dependencies
+- **dev**: Start development servers (cache disabled, persistent)
+- **generate**: Generate GraphQL schemas and code
+- **type-check**: Type checking (depends on generate task)
+- **lint**: Code linting
+- **deploy:dev/prod**: Deployment (depends on build)
 
-### pnpm workspacesとの統合
+### pnpm workspaces Integration
 
-- `pnpm-workspace.yaml`でパッケージ場所を定義
-- `pnpm --filter`コマンドで特定パッケージのタスクを実行
-- ワークスペース内の依存関係は自動的に解決
+- Package locations defined in `pnpm-workspace.yaml`
+- Run specific package tasks with `pnpm --filter` command
+- Dependencies within workspace are automatically resolved
 
-### Turborepoの実行方法
+### Running Turborepo
 
 ```bash
-# ルートから全パッケージのタスクを実行
+# Run tasks for all packages from root
 pnpm build              # turbo run build
 pnpm dev                # turbo run dev
 pnpm generate           # turbo run generate
 
-# 特定パッケージのタスクを実行
+# Run tasks for specific packages
 pnpm --filter @apollo-cloudflare-react/backend build
 pnpm --filter @apollo-cloudflare-react/frontend dev
 
-# Turborepoのキャッシュをクリア
+# Clear Turborepo cache
 rm -rf .turbo packages/*/.turbo
 ```
 
-### Turborepoのメリット
+### Turborepo Benefits
 
-- **高速なタスク実行**: インテリジェントなキャッシュシステム
-- **並列実行**: 依存関係に基づく最適な実行順序
-- **インクリメンタルビルド**: 変更されたパッケージのみ再ビルド
+- **Fast Task Execution**: Intelligent caching system
+- **Parallel Execution**: Optimal execution order based on dependencies
+- **Incremental Builds**: Only rebuild changed packages
 
-## Catalyst UI Kit（Tailwind UIコンポーネント）
+## Catalyst UI Kit (Tailwind UI Components)
 
-### 概要
+### Overview
 
-Catalyst は Tailwind CSS チームが開発した最新のUIキットで、26個のReactコンポーネントを提供しています。このプロジェクトの `packages/frontend/src/components/ui/` に配置されており、フロントエンド開発で活用できます。
+Catalyst is a modern UI kit developed by the Tailwind CSS team, providing 26 React components. Located in `packages/frontend/src/components/ui/` for frontend development use.
 
-### 利用可能なコンポーネント
+### Available Components
 
-#### 基本要素
-- **Button**: プライマリ、セカンダリ、ゴースト等のバリエーション
-- **Input**: テキスト入力フィールド
-- **Badge**: ステータスやラベル表示
-- **Avatar**: ユーザーアバター表示
-- **Text/Heading**: タイポグラフィコンポーネント
+#### Basic Elements
 
-#### フォームコントロール
-- **Checkbox/Radio**: 選択コントロール
-- **Switch**: トグルスイッチ
-- **Textarea**: 複数行テキスト入力
-- **Field/FieldGroup/Label**: フォーム構造化コンポーネント
+- **Button**: Primary, secondary, ghost variations
+- **Input**: Text input fields
+- **Badge**: Status or label display
+- **Avatar**: User avatar display
+- **Text/Heading**: Typography components
 
-#### ナビゲーション
-- **Sidebar/Navbar**: アプリケーションナビゲーション
-- **Dropdown**: ドロップダウンメニュー
-- **Pagination**: ページネーション
+#### Form Controls
 
-#### レイアウト
-- **SidebarLayout**: サイドバー付きレイアウト
-- **StackedLayout**: 積層レイアウト
-- **AuthLayout**: 認証画面用レイアウト
+- **Checkbox/Radio**: Selection controls
+- **Switch**: Toggle switches
+- **Textarea**: Multi-line text input
+- **Field/FieldGroup/Label**: Form structure components
 
-#### オーバーレイ
-- **Dialog**: モーダルダイアログ
-- **Alert**: アラート表示
+#### Navigation
 
-#### データ表示
-- **Table**: テーブルコンポーネント
-- **DescriptionList**: 説明リスト
-- **Listbox/Combobox**: 選択リスト
+- **Sidebar/Navbar**: Application navigation
+- **Dropdown**: Dropdown menus
+- **Pagination**: Page navigation
 
-### 使用方法
+#### Layouts
+
+- **SidebarLayout**: Layout with sidebar
+- **StackedLayout**: Stacked layout
+- **AuthLayout**: Authentication screen layout
+
+#### Overlays
+
+- **Dialog**: Modal dialogs
+- **Alert**: Alert displays
+
+#### Data Display
+
+- **Table**: Table component
+- **DescriptionList**: Description lists
+- **Listbox/Combobox**: Selection lists
+
+### Usage
 
 ```jsx
-// コンポーネントのインポート
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Field, FieldGroup, Label } from '@/components/ui/fieldset'
+// Import components
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Field, FieldGroup, Label } from "@/components/ui/fieldset";
 
-// 使用例
+// Usage example
 function ExampleForm() {
   return (
     <form>
       <FieldGroup>
         <Field>
-          <Label>名前</Label>
-          <Input name="name" placeholder="山田太郎" />
+          <Label>Name</Label>
+          <Input name="name" placeholder="John Doe" />
         </Field>
         <Field>
-          <Label>メールアドレス</Label>
+          <Label>Email</Label>
           <Input type="email" name="email" placeholder="email@example.com" />
         </Field>
-        <Button type="submit">保存</Button>
+        <Button type="submit">Save</Button>
       </FieldGroup>
     </form>
-  )
+  );
 }
 ```
 
-### 技術仕様
+### Technical Specifications
 
-- **Tailwind CSS**: v4.0以上が必要
-- **依存パッケージ**: 
-  - `@headlessui/react`: アクセシビリティ対応のUIプリミティブ
-  - `framer-motion`: アニメーション
-  - `clsx`: クラス名の条件付き結合
+- **Tailwind CSS**: v4.0+ required
+- **Dependencies**:
+  - `@headlessui/react`: Accessibility-ready UI primitives
+  - `framer-motion`: Animations
+  - `clsx`: Conditional class name joining
 
-### 開発時の活用ポイント
+### Development Tips
 
-1. **カスタマイズ性**: Tailwindのユーティリティクラスで簡単にスタイル調整可能
-2. **アクセシビリティ**: キーボード操作とスクリーンリーダー対応済み
-3. **TypeScript対応**: 型安全な開発が可能
-4. **一貫性**: デザインシステムとして統一感のあるUI構築
+1. **Customizability**: Easy style adjustments with Tailwind utility classes
+2. **Accessibility**: Keyboard operation and screen reader support
+3. **TypeScript Support**: Type-safe development
+4. **Consistency**: Unified UI as a design system
 
-### GraphQL連携での活用例
+### GraphQL Integration Example
 
 ```jsx
-import { useState } from 'react'
-import { useQuery, useMutation } from '@apollo/client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Dialog, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { useState } from "react";
+import { useQuery, useMutation } from "@apollo/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 function ArticleManager() {
-  const [isOpen, setIsOpen] = useState(false)
-  const { data, loading } = useQuery(GET_ARTICLES)
-  const [createArticle] = useMutation(CREATE_ARTICLE)
+  const [isOpen, setIsOpen] = useState(false);
+  const { data, loading } = useQuery(GET_ARTICLES);
+  const [createArticle] = useMutation(CREATE_ARTICLE);
 
   return (
     <>
-      <Button onClick={() => setIsOpen(true)}>新規記事作成</Button>
-      
+      <Button onClick={() => setIsOpen(true)}>Create New Article</Button>
+
       <Table>
         <TableHead>
           <TableRow>
-            <TableHeader>タイトル</TableHeader>
-            <TableHeader>作成日</TableHeader>
+            <TableHeader>Title</TableHeader>
+            <TableHeader>Created</TableHeader>
           </TableRow>
         </TableHead>
         <TableBody>
-          {data?.articles.map(article => (
+          {data?.articles.map((article) => (
             <TableRow key={article.id}>
               <TableCell>{article.title}</TableCell>
               <TableCell>{article.createdAt}</TableCell>
@@ -532,267 +770,311 @@ function ArticleManager() {
       </Table>
 
       <Dialog open={isOpen} onClose={setIsOpen}>
-        <DialogTitle>新規記事作成</DialogTitle>
-        <DialogDescription>
-          記事のタイトルと内容を入力してください
-        </DialogDescription>
-        {/* フォーム実装 */}
+        <DialogTitle>Create New Article</DialogTitle>
+        <DialogBody>
+          Enter article title and content
+          {/* Form implementation */}
+        </DialogBody>
+        <DialogActions>
+          <Button onClick={() => setIsOpen(false)}>Cancel</Button>
+          <Button type="submit">Create</Button>
+        </DialogActions>
       </Dialog>
     </>
-  )
+  );
 }
 ```
 
-### ベストプラクティス
+### Best Practices
 
-1. **コンポーネントの組み合わせ**: 小さなコンポーネントを組み合わせて複雑なUIを構築
-2. **一貫性の維持**: Catalystコンポーネントを基準にカスタムコンポーネントを作成
-3. **アクセシビリティ優先**: 提供されているアクセシビリティ機能を活用
-4. **パフォーマンス**: 必要なコンポーネントのみインポートして使用
+1. **Component Composition**: Build complex UIs by combining small components
+2. **Maintain Consistency**: Create custom components based on Catalyst components
+3. **Accessibility First**: Leverage provided accessibility features
+4. **Performance**: Import only necessary components
 
-### 参考リンク
+### Reference Links
 
 - [Catalyst Documentation](https://catalyst.tailwindui.com/docs)
 - [Headless UI](https://headlessui.dev)
 - [Framer Motion](https://www.framer.com/docs/)
 
-## トラブルシューティング
+## Troubleshooting
 
-### pnpm generateでエラーが出る場合
+### pnpm generate Errors
 
-1. Node.jsバージョンが22.11.0であることを確認
-2. `packages/backend/.env`に`DATABASE_URL="file:./dev.db"`が設定されているか確認
-3. `pnpm prisma generate`を先に実行
+1. Verify Node.js version is 22.11.0
+2. Check `packages/backend/.env` has `DATABASE_URL="file:./dev.db"`
+3. Run `pnpm prisma generate` first
 
-### D1マイグレーションが失敗する場合
+### D1 Migration Failures
 
 ```bash
-# テーブルの存在確認
+# Check existing tables
 pnpm wrangler d1 execute apollo-cloudflare-db --command "SELECT name FROM sqlite_master WHERE type='table';"
 
-# 既存のテーブルを削除して再実行
+# Drop existing tables and retry
 pnpm wrangler d1 execute apollo-cloudflare-db --command "DROP TABLE IF EXISTS User, Article, Category, _ArticleToCategory;"
 ```
 
-### D1コマンドで対象環境を明確に指定する
+### Specifying D1 Command Target Environment
 
-D1コマンドはデフォルトでローカルDBに対して実行されます：
+D1 commands execute against local DB by default:
 
-- **ローカル**: フラグなし または `--local`フラグ（デフォルト）
-- **リモート（本番）**: `--remote`フラグを明示的に追加
+- **Local**: No flag or `--local` flag (default)
+- **Remote (Production)**: Explicitly add `--remote` flag
 
 ```bash
-# 例：マイグレーションの適用
-pnpm d1:migrations:apply         # ローカル（デフォルト）
-pnpm d1:migrations:apply:remote  # リモート本番（--remote）
+# Example: Applying migrations
+pnpm d1:migrations:apply         # Local (default)
+pnpm d1:migrations:apply:remote  # Remote production (--remote)
 ```
 
-### 型エラーが発生する場合
+### Type Errors
 
 ```bash
-# 生成ファイルのクリーンアップ
+# Clean up generated files
 rm -rf packages/backend/src/gqlTypes.ts
 rm -rf packages/frontend/src/generated-graphql
 
-# 再生成
+# Regenerate
 pnpm generate
 ```
 
-## クリーンアーキテクチャ設計
+## Simple 2-Layer Architecture Design
 
-このプロジェクトのBackendはクリーンアーキテクチャの原則に従って設計されています。
+The Backend of this project uses a simple 2-layer architecture suitable for the project scale.
 
-### レイヤー構成
+### Layer Structure
 
-1. **Domain層** (`src/domain/`)
-   - **entities/**: ドメインエンティティ（ビジネスルールを含む）
-   - **errors/**: カスタムエラークラス（NotFoundError, ValidationError等）
-   - **repositories/**: リポジトリインターフェース（抽象化）
+1. **Repositories Layer** (`src/repositories/`)
 
-2. **Application層** (`src/application/`)
-   - **usecases/**: ユースケース（ビジネスロジックの実装）
-   - 外部への依存はインターフェース経由のみ
-   - エラーハンドリングとバリデーション
+   - **Responsibility**: Pure database operations
+   - Thin wrapper around Prisma client
+   - Returns Prisma models as-is (no type conversion)
+   - Can freely add business-specific methods
 
-3. **Infrastructure層** (`src/infrastructure/`)
-   - **repositories/**: Prismaを使用したリポジトリ実装
-   - **container.ts**: 依存性注入（DI）コンテナ
+2. **Services Layer** (`src/services/`)
 
-4. **Presentation層** (`src/resolvers/`)
-   - GraphQLリゾルバー
-   - 認証処理
-   - DIコンテナからユースケースを呼び出し
+   - **Responsibility**: Business logic
+   - Permission checks
+   - Input validation
+   - Error handling
+   - Multiple repository coordination
 
-### 依存関係の方向
+3. **Resolvers Layer** (`src/resolvers/`)
+   - **queries/**: Query resolvers
+   - **mutations/**: Mutation resolvers
+   - **trivials/**: Field resolvers (lazy loading relations)
 
-```
-Presentation → Application → Domain
-     ↓              ↓
-Infrastructure ← Domain (interfaces only)
-```
-
-### 実装例
+### Implementation Examples
 
 ```typescript
-// Domain Entity
-export class Article {
-  canBeEditedBy(userId: number): boolean {
-    return this.userId === userId.toString();
+// Repository - Data access
+export class ArticleRepository {
+  constructor(private prisma: PrismaClient) {}
+
+  async findById(id: number): Promise<Article | null> {
+    return this.prisma.article.findUnique({ where: { id } });
+  }
+
+  // Business-specific methods
+  async findPublishedByUserId(userId: number): Promise<Article[]> {
+    return this.prisma.article.findMany({
+      where: { userId, status: "PUBLISHED" },
+      orderBy: { createdAt: "desc" },
+    });
   }
 }
 
-// Use Case
-export class ArticleUseCase {
-  async updateArticle(id: number, input: UpdateArticleInput, userId: number) {
-    const article = await this.articleRepository.findById(id);
-    const articleEntity = ArticleEntity.fromPrismaModel(article);
-    
-    if (!articleEntity.canBeEditedBy(userId)) {
-      throw new UnauthorizedError('update', 'article');
+// Service - Business logic
+export class ArticleService {
+  async updateArticle(
+    id: number,
+    input: UpdateInput,
+    userId: number
+  ): Promise<Article> {
+    const article = await this.articleRepo.findById(id);
+
+    // Permission check
+    if (article.userId !== userId) {
+      throw new GraphQLError("You don't have permission");
     }
-    
-    return this.articleRepository.update(id, input);
+
+    return this.articleRepo.update(id, input);
   }
 }
 
-// Resolver
-export const updateArticle = async (_parent, { input }, { container, user }) => {
-  const dbUser = await container.useCases.user.getUserBySub(user.sub);
-  return container.useCases.article.updateArticle(input.id, input, dbUser.id);
+// Resolver - GraphQL interface
+export const updateArticle = async (_parent, { input }, { services, user }) => {
+  const authenticatedUser = requireAuth(user);
+  // Get userId from Clerk publicMetadata (no DB access)
+  return services.article.updateArticle(
+    input.id,
+    input,
+    authenticatedUser.userId
+  );
+};
+
+// Trivial Resolver - Lazy loading relations
+export const Article: ArticleResolvers = {
+  categories: async (parent, {}, { prisma }) => {
+    const categories = await prisma.article
+      .findUnique({ where: { id: parent.id } })
+      .categories();
+    return categories || [];
+  },
 };
 ```
 
-### カスタムエラー
+### Error Handling
 
-- `NotFoundError`: リソースが見つからない場合
-- `ValidationError`: 入力値が無効な場合
-- `UnauthorizedError`: 権限がない場合
-- `BusinessRuleViolationError`: ビジネスルール違反
-
-## コーディングルール
-
-### コメントの書き方
-
-**避けるべきコメント（自明なコメント）**：
 ```typescript
-// ❌ 悪い例
-const user = await getUser(); // ユーザーを取得
-if (!user) { // ユーザーが存在しない場合
-  throw new Error(); // エラーをスロー
+// errors/index.ts
+import { GraphQLError } from "graphql";
+
+export function notFoundError(resource: string, id: string) {
+  return new GraphQLError(`${resource} with ID ${id} not found`, {
+    extensions: { code: "NOT_FOUND" },
+  });
+}
+```
+
+## Coding Rules
+
+### Comment Guidelines
+
+**Avoid Obvious Comments**:
+
+```typescript
+// ❌ Bad examples
+const user = await getUser(); // Get user
+if (!user) {
+  // If user doesn't exist
+  throw new Error(); // Throw error
 }
 
-// ❌ 悪い例
-// 認証必須
+// ❌ Bad example
+// Authentication required
 const authenticatedUser = requireAuth(user);
 
-// ❌ 悪い例
-// DIコンテナを作成
+// ❌ Bad example
+// Create DI container
 const container = createContainer(prisma);
 ```
 
-**良いコメント（理由や意図を説明）**：
+**Good Comments (Explain Why/Intent)**:
+
 ```typescript
-// ✅ 良い例
-// Workerの実行時間制限（30秒）を考慮してタイムアウトを設定
+// ✅ Good examples
+// Consider Worker execution time limit (30 seconds)
 const TIMEOUT_MS = 25000;
 
-// ✅ 良い例
-// Supabase JWTのsub claimはauth.users.idと同じ値
-// ただしPrismaのUser.idとは異なるため、User.subで検索する必要がある
+// ✅ Good example
+// Clerk JWT sub claim format is user_xxx
+// Need to match against Prisma User.sub
 const dbUser = await getUserBySub(authUser.sub);
 
-// ✅ 良い例
+// ✅ Good example
 /**
- * 記事の更新権限をチェックする
- * - 記事の作成者のみが編集可能
- * - 管理者権限の実装は今後追加予定
+ * Check article update permissions
+ * - Only article creator can edit
+ * - Admin permissions to be added later
  */
 ```
 
-### 一般的なコーディング規則
+### General Coding Rules
 
-1. **TypeScriptの活用**
-   - `any`型の使用は最小限に
-   - 型推論が効く場合は明示的な型注釈は不要
+1. **TypeScript Usage**
 
-2. **エラーハンドリング**
-   - カスタムエラークラスを使用
-   - エラーメッセージは具体的に
+   - **`any` type is prohibited** - Use proper type definitions
+     - Exception: Only in catch clauses with type guards
+   - No explicit type annotations when inference works
+   - Use unknown type and narrow with type guards
 
-3. **関数・変数名**
-   - 意図が明確な名前を使用
-   - 略語は避ける（例: `usr` → `user`）
+2. **Error Handling**
 
-4. **非同期処理**
-   - `async/await`を使用
-   - エラーは適切にキャッチして処理
+   - **Never throw GraphQLError directly** - Always use error functions from `src/errors/index.ts`
+     - `notFoundError()` - Resource not found
+     - `validationError()` - Validation errors
+     - `forbiddenError()` - No permission
+   - Use `ERROR_CODES` constants for error codes
+   - Write specific error messages
 
-## 開発フロー
+3. **Function/Variable Names**
 
-1. **機能開発**
+   - Use clear, intentional names
+   - Avoid abbreviations (e.g., `usr` → `user`)
 
-   - GraphQLスキーマの更新（`packages/backend/schema/*.gql`）
-   - `pnpm generate`で型定義を生成
-   - ユースケースの実装（ビジネスロジック）
-   - リポジトリの実装（必要に応じて）
-   - リゾルバーの実装（薄く保つ）
-   - フロントエンドの実装
+4. **Async Processing**
+   - Use `async/await`
+   - Properly catch and handle errors
 
-2. **データベース変更**
+## Development Flow
 
-   - Prismaスキーマの更新（`packages/backend/prisma/schema.prisma`）
-   - マイグレーションファイルの作成（`packages/backend/migrations/`）
-   - `pnpm d1:migrations:apply:remote`でリモートにマイグレーション適用
-   - `pnpm d1:migrations:apply`でローカルにマイグレーション適用
-   - `pnpm prisma generate`でクライアント更新
+1. **Feature Development**
 
-3. **デプロイ**
-   - `pnpm build`でビルド確認
-   - `pnpm type-check`で型チェック
-   - Backend: `pnpm deploy:dev`（開発）または`pnpm deploy:prod`（本番）
-   - Frontend: `pnpm deploy:dev`（開発）または`pnpm deploy:prod`（本番）
+   - Update GraphQL schema (`packages/backend/schema/*.gql`)
+   - Generate types with `pnpm generate`
+   - Implement services (business logic)
+   - Implement repositories (if needed)
+   - Implement resolvers (keep thin)
+   - Implement frontend
 
-## 注意事項
+2. **Database Changes**
 
-- D1はSQLiteベースなので、一部のPostgreSQL/MySQL固有の機能は使用不可
-- Cloudflare Workersは実行時間とメモリに制限あり（有料プランで緩和）
-- 環境変数の管理：
-  - Backend: `.dev.vars`（ローカル）、`wrangler secret`（本番の秘密情報）
-  - Frontend: `.env`ファイル群（ビルド時に使用）
-- 自動生成ファイルは直接編集しない：
-  - `src/gqlTypes.ts` - GraphQL型定義
-  - `src/schema.ts` - Workers用スキーマ
-  - `schema/schema.gql` - 結合されたスキーマ
-  - `src/generated-graphql/` - Frontend GraphQL型定義
-- Wrangler v4では`node_compat`は廃止、`nodejs_compat`を使用
-- ファイルシステムAPIは使用不可（Workers環境のため）
-- **Frontend (Static Assets)の配信は無料**（Workerスクリプトが起動しないため）
+   - Update Prisma schema (`packages/backend/prisma/schema.prisma`)
+   - Create migration files (`packages/backend/migrations/`)
+   - Apply to remote with `pnpm d1:migrations:apply:remote`
+   - Apply to local with `pnpm d1:migrations:apply`
+   - Update client with `pnpm prisma generate`
 
-## Workers Static Assets設定
+3. **Deployment**
+   - Verify build with `pnpm build`
+   - Type check with `pnpm type-check`
+   - Backend: `pnpm deploy:dev` (development) or `pnpm deploy:prod` (production)
+   - Frontend: `pnpm deploy:dev` (development) or `pnpm deploy:prod` (production)
 
-Frontend の `wrangler.toml` の重要な設定：
+## Important Notes
+
+- D1 is SQLite-based, so some PostgreSQL/MySQL-specific features are unavailable
+- Cloudflare Workers have execution time and memory limits (relaxed with paid plans)
+- Environment variable management:
+  - Backend: `.dev.vars` (local), `wrangler secret` (production secrets)
+  - Frontend: `.env` files (used at build time)
+- Never directly edit auto-generated files:
+  - `src/gqlTypes.ts` - GraphQL type definitions
+  - `src/schema.ts` - Workers schema
+  - `schema/schema.gql` - Combined schema
+  - `src/generated-graphql/` - Frontend GraphQL types
+- Wrangler v4 deprecated `node_compat`, use `nodejs_compat`
+- File system APIs are unavailable (Workers environment)
+- **Frontend (Static Assets) delivery is free** (no Worker script execution)
+
+## Workers Static Assets Configuration
+
+Important Frontend `wrangler.jsonc` settings:
 
 ```toml
 # Cloudflare Workers with Static Assets configuration
 name = "apollo-cloudflare-frontend"
 compatibility_date = "2024-11-25"
 
-# Static Assets（Workerスクリプトなし = 無料配信）
+# Static Assets (No Worker script = Free delivery)
 assets = { directory = "./dist", not_found_handling = "single-page-application" }
 
-# 本番環境設定
+# Production environment
 [env.production]
 name = "apollo-cloudflare-frontend-prod"
 ```
 
-- `not_found_handling = "single-page-application"`: SPAのルーティングサポート
-- Workerスクリプト（`main`）の指定なし: 静的アセットのみの無料配信
+- `not_found_handling = "single-page-application"`: SPA routing support
+- No `main` Worker script specified: Static assets only for free delivery
 
-## 参考リンク
+## Reference Links
 
 - [Cloudflare D1 Docs](https://developers.cloudflare.com/d1/)
 - [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/)
 - [Workers Static Assets](https://developers.cloudflare.com/workers/static-assets/)
 - [Prisma D1 Adapter](https://www.prisma.io/docs/orm/overview/databases/cloudflare-d1)
 - [Apollo Server Cloudflare](https://www.apollographql.com/docs/apollo-server/deployment/cloudflare-workers)
-- [Supabase Auth](https://supabase.com/docs/guides/auth)
+- [Clerk Auth](https://clerk.com/docs)

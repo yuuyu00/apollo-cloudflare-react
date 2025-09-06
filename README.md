@@ -1,6 +1,6 @@
 # Apollo Cloudflare React Stack
 
-Cloudflare Workers上で動作するApollo Server、React、Supabase Authを統合したフルスタックアプリケーション
+Cloudflare Workers上で動作するApollo Server、React、Clerk Authを統合したフルスタックアプリケーション
 
 ## 概要
 
@@ -8,7 +8,7 @@ Cloudflare Workers上で動作するApollo Server、React、Supabase Authを統�
 
 - **バックエンド**: Cloudflare Workers上で動作するApollo GraphQL ServerとD1データベース
 - **フロントエンド**: Cloudflare Workers Static Assetsとしてデプロイされた React SPA
-- **認証**: JWT検証によるSupabase Auth
+- **認証**: Clerk Authによる認証・認可
 - **インフラ**: Cloudflareのエッジネットワーク上で完全サーバーレス
 
 ## アーキテクチャ
@@ -18,7 +18,7 @@ Cloudflare Workers上で動作するApollo Server、React、Supabase Authを統�
     │
     ├─── React SPA (Cloudflare Workers Static Assets)
     │     ・Apollo Client (GraphQL)
-    │     ・Supabase Auth Client
+    │     ・Clerk Auth Client
     │     ・React Router (SPAルーティング)
     │
     │ GraphQLリクエスト (JWT付きヘッダー)
@@ -26,7 +26,9 @@ Cloudflare Workers上で動作するApollo Server、React、Supabase Authを統�
 Apollo Server (Cloudflare Workers)
     │
     ├─── GraphQLスキーマ & リゾルバー
-    ├─── Supabase JWT検証
+    ├─── Services層 (ビジネスロジック)
+    ├─── Repositories層 (データアクセス)
+    ├─── Clerk JWT検証
     └─── Prisma ORM (D1 Adapter)
     │
     │ SQLクエリ
@@ -37,7 +39,7 @@ Cloudflare D1 (SQLite)
     ・カテゴリ管理
 
 外部サービス:
-    Supabase Auth
+    Clerk Auth
     ・ユーザー登録/ログイン
     ・JWTトークン生成
     ・OAuthプロバイダーサポート
@@ -51,7 +53,7 @@ Cloudflare D1 (SQLite)
 - **API**: Apollo ServerによるGraphQL
 - **データベース**: Cloudflare D1 (エッジで動作するSQLite)
 - **ORM**: Prisma (D1 Adapter使用)
-- **認証**: Supabase JWT検証
+- **認証**: Clerk JWT検証 (publicMetadata活用)
 
 ### フロントエンド
 
@@ -65,10 +67,11 @@ Cloudflare D1 (SQLite)
 ### 開発ツール
 
 - **モノレポ管理**: Turborepo + pnpm workspaces
-- **パッケージマネージャー**: pnpm
+- **パッケージマネージャー**: pnpm v8.14.0
 - **コード生成**: GraphQL Code Generator
 - **型安全性**: エンドツーエンドのTypeScript
 - **CI/CD**: GitHub Actions
+- **UIコンポーネント**: Catalyst (Tailwind UI Kit)
 
 ## プロジェクト構成
 
@@ -78,21 +81,29 @@ apollo-cloudflare-react/
 │   ├── backend/                 # Cloudflare Workers上のApollo Server
 │   │   ├── src/
 │   │   │   ├── index.ts        # Workersエントリーポイント
+│   │   │   ├── repositories/   # データアクセス層
+│   │   │   ├── services/       # ビジネスロジック層
 │   │   │   ├── resolvers/      # GraphQLリゾルバー
+│   │   │   │   ├── queries/    # Query resolvers
+│   │   │   │   ├── mutations/  # Mutation resolvers
+│   │   │   │   └── trivials/   # Field resolvers
+│   │   │   ├── errors/         # エラー定義
+│   │   │   ├── context.ts      # GraphQLコンテキスト
 │   │   │   ├── db.ts          # Prismaクライアント設定
-│   │   │   └── auth.ts        # JWT検証
+│   │   │   └── auth.ts        # Clerk JWT検証
 │   │   ├── schema/            # GraphQLスキーマファイル (.gql)
 │   │   ├── prisma/            # データベーススキーマ
 │   │   ├── migrations/        # D1マイグレーション
-│   │   └── wrangler.toml      # Cloudflare Workers設定
+│   │   └── wrangler.jsonc      # Cloudflare Workers設定
 │   │
 │   └── frontend/              # React SPA
 │       ├── src/
 │       │   ├── components/    # Reactコンポーネント
+│       │   │   └── ui/        # Catalyst UIコンポーネント
 │       │   ├── screens/       # ページコンポーネント
-│       │   ├── graphql/       # GraphQLクエリ/ミューテーション
+│       │   ├── contexts/      # React Contexts
 │       │   └── generated-graphql/ # 自動生成された型
-│       ├── wrangler.toml      # Static Assets設定
+│       ├── wrangler.jsonc      # Static Assets設定
 │       └── .env.development   # 開発環境設定
 │
 ├── .github/
@@ -108,9 +119,9 @@ apollo-cloudflare-react/
 ### 前提条件
 
 - Node.js v22.11.0 (LTS)
-- pnpm v9以上
+- pnpm v8.14.0以上
 - Cloudflareアカウント
-- Supabaseアカウント
+- Clerkアカウント
 
 ### 初期設定
 
@@ -132,11 +143,12 @@ apollo-cloudflare-react/
    バックエンド (`packages/backend/.dev.vars`):
 
    ```
-   SUPABASE_URL=your-supabase-url
-   SUPABASE_ANON_KEY=your-supabase-anon-key
-   SUPABASE_JWT_SECRET=your-supabase-jwt-secret
+   CLERK_SECRET_KEY=sk_test_xxxxxxxxxxxxx
+   CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxx
+   CLERK_PEM_PUBLIC_KEY=-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQE...\n-----END PUBLIC KEY-----
    GRAPHQL_INTROSPECTION=true
-   CORS_ORIGIN=http://localhost:3000
+   GRAPHQL_PLAYGROUND=true
+   CORS_ORIGIN=http://localhost:5000
    ```
 
    バックエンド (`packages/backend/.env`):
@@ -145,7 +157,12 @@ apollo-cloudflare-react/
    DATABASE_URL="file:./dev.db"
    ```
 
-   フロントエンドの環境ファイルはリポジトリに含まれています。
+   フロントエンド (`packages/frontend/.env`):
+
+   ```
+   VITE_GRAPHQL_ENDPOINT=http://localhost:8787/graphql
+   VITE_CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxx
+   ```
 
 4. **Cloudflare D1データベースの作成**
 
@@ -154,7 +171,7 @@ apollo-cloudflare-react/
    pnpm wrangler d1 create apollo-cloudflare-db
    ```
 
-   作成されたIDで`wrangler.toml`の`database_id`を更新してください。
+   作成されたIDで`wrangler.jsonc`の`database_id`を更新してください。
 
 5. **データベースマイグレーションの適用**
 
@@ -183,7 +200,7 @@ pnpm dev
 # バックエンドのみ (http://localhost:8787)
 cd packages/backend && pnpm dev
 
-# フロントエンドのみ (http://localhost:3000)
+# フロントエンドのみ (http://localhost:5000)
 cd packages/frontend && pnpm dev
 ```
 
@@ -193,6 +210,8 @@ cd packages/frontend && pnpm dev
 
    - `packages/backend/schema/`内の`.gql`ファイルを編集
    - `pnpm generate`を実行して型を更新
+   - `packages/backend/src/services/`でサービスを実装
+   - `packages/backend/src/repositories/`でリポジトリを実装（必要に応じて）
    - `packages/backend/src/resolvers/`でリゾルバーを実装
 
 2. **データベーススキーマの変更**
@@ -203,9 +222,10 @@ cd packages/frontend && pnpm dev
    - Prismaクライアント生成: `pnpm prisma generate`
 
 3. **フロントエンド開発**
-   - `packages/frontend/src/graphql/`でGraphQLクエリを記述
+   - `packages/frontend/src/generated-graphql/`に型が自動生成される
    - `pnpm generate`を実行して型付きフックを作成
    - Reactコンポーネントで生成されたフックを使用
+   - Catalyst UIコンポーネントを活用したUI構築
 
 ### コード品質チェック
 
@@ -250,42 +270,5 @@ GitHub Actionsによる自動デプロイが設定されています。
 
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
-
-## 主な特徴
-
-### ゼロコストの静的ホスティング
-
-フロントエンドの静的アセットはWorkerの起動なしにCloudflareのエッジネットワークから直接配信されるため、ホスティングコストが発生しません。
-
-### エッジコンピューティング
-
-APIとデータベースの両方がCloudflareのエッジロケーションで実行され、世界中のユーザーに対して低遅延を実現します。
-
-### 完全な型安全性
-
-PrismaとGraphQL Code Generatorにより、データベーススキーマからReactコンポーネントまでエンドツーエンドの型安全性を提供します。
-
-### 効率的な開発環境
-
-- ホットリロードによる即時反映
-- 自動コード生成による開発効率化
-- Turborepoによる効率的なモノレポ管理
-- 統合されたリンティングと型チェック
-
-## パフォーマンス
-
-- **グローバルCDN**: 300以上のエッジロケーションで静的アセットをキャッシュ
-- **エッジコンピューティング**: APIがユーザーの近くで実行
-- **最適化されたバンドル**: コード分割と遅延読み込み
-- **コールドスタートの最小化**: Workersの高速起動
-
-## スケーラビリティ
-
-- **サーバーレスアーキテクチャ**: 自動スケーリングによりトラフィックの増減に対応
-- **エッジデータベース**: D1による一貫したパフォーマンス
-- **静的アセット配信**: フロントエンドの無制限スケーリング
-- **従量課金モデル**: 使用量に応じた柔軟なコスト構造
-
-## トラブルシューティング
-
-一般的な問題と解決方法については[CLAUDE.md](./CLAUDE.md#トラブルシューティング)を参照してください。
+- `CLERK_SECRET_KEY`
+- `CLERK_PEM_PUBLIC_KEY`

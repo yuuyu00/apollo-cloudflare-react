@@ -1,16 +1,36 @@
-import { createBrowserRouter, RouterProvider, Link, Outlet, useNavigate } from "react-router";
-import { ApolloProvider, ApolloClient, InMemoryCache, createHttpLink } from "@apollo/client";
+import React, { useEffect, useMemo } from "react";
+import {
+  createBrowserRouter,
+  RouterProvider,
+  Link,
+  Outlet,
+  useNavigate,
+} from "react-router";
+import {
+  ApolloProvider,
+  ApolloClient,
+  InMemoryCache,
+  createHttpLink,
+} from "@apollo/client";
 import { setContext } from "@apollo/client/link/context";
-import { ArticleDetail, ArticleList, Login, Signup, CreateArticle, SignUpProfile } from "./screens";
+import { ClerkProvider, useAuth as useClerkAuth } from "@clerk/clerk-react";
+import {
+  ArticleDetail,
+  ArticleList,
+  Login,
+  Signup,
+  CreateArticle,
+  SignUpProfile,
+} from "./screens";
+import ImageCacheTest from "./pages/ImageCacheTest";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import { AuthGuard } from "./components/AuthGuard";
 import { EmailConfirmationHandler } from "./components/EmailConfirmationHandler";
-import { ProfileCheckWrapper } from "./components/ProfileCheckWrapper";
 import { Button } from "./components/ui/button";
 import { useAuth } from "./contexts/AuthContext";
 import { PlusIcon } from "@heroicons/react/24/solid";
-import { supabase } from "./lib/supabase";
+import { setupZodJapaneseErrorMap } from "./lib/zod-japanese";
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -20,15 +40,17 @@ const Header = () => {
       {user ? (
         <div className="flex items-center gap-4">
           <span className="text-sm text-gray-400">{user.email}</span>
-          <Button onClick={signOut} plain className="text-text hover:text-white">
+          <Button
+            onClick={signOut}
+            plain
+            className="text-text hover:text-white"
+          >
             ログアウト
           </Button>
         </div>
       ) : (
         <Link to="/login">
-          <Button color="blue">
-            ログイン
-          </Button>
+          <Button color="blue">ログイン</Button>
         </Link>
       )}
     </div>
@@ -57,53 +79,72 @@ const FAB = () => {
 
 const RootLayout = () => {
   return (
-    <ProfileCheckWrapper>
+    <>
       <Header />
-      <Outlet />
+      <div className="py-24">
+        <Outlet />
+      </div>
       <FAB />
-    </ProfileCheckWrapper>
+    </>
+  );
+};
+
+const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+if (!CLERK_PUBLISHABLE_KEY) {
+  throw new Error("Missing Clerk Publishable Key");
+}
+
+const ApolloProviderWrapper = ({ children }: { children: React.ReactNode }) => {
+  const { getToken } = useClerkAuth();
+
+  // Memoize Apollo Client to prevent recreation on token updates
+  const apolloClient = useMemo(() => {
+    // Create HTTP link
+    const httpLink = createHttpLink({
+      uri: import.meta.env.VITE_GRAPHQL_ENDPOINT,
+      credentials: "include",
+    });
+
+    // Create auth link to add JWT token to requests
+    // IMPORTANT: This uses a closure to capture getToken, but doesn't recreate the client
+    const authLink = setContext(async (_, { headers }) => {
+      const token = await getToken();
+      return {
+        headers: {
+          ...headers,
+          authorization: token ? `Bearer ${token}` : "",
+        },
+      };
+    });
+
+    // Apollo Client with auth context
+    return new ApolloClient({
+      link: authLink.concat(httpLink),
+      cache: new InMemoryCache(),
+      defaultOptions: {
+        watchQuery: {
+          fetchPolicy: "cache-first",
+        },
+      },
+    });
+  }, []); // Empty dependency array - client created only once
+
+  return (
+    <ApolloProvider client={apolloClient}>
+      <AuthProvider>
+        <ToastProvider>{children}</ToastProvider>
+      </AuthProvider>
+    </ApolloProvider>
   );
 };
 
 const AppProvider = ({ children }: { children: React.ReactNode }) => {
-  // Create HTTP link
-  const httpLink = createHttpLink({
-    uri: import.meta.env.VITE_GRAPHQL_ENDPOINT,
-  });
-
-  // Create auth link to add JWT token to requests
-  const authLink = setContext(async (_, { headers }) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-
-    return {
-      headers: {
-        ...headers,
-        authorization: token ? `Bearer ${token}` : "",
-      }
-    }
-  });
-
-  // Apollo Client with auth context
-  const apolloClient = new ApolloClient({
-    link: authLink.concat(httpLink),
-    cache: new InMemoryCache(),
-    defaultOptions: {
-      watchQuery: {
-        fetchPolicy: 'cache-and-network',
-      },
-    },
-  });
-
   return (
     <div className="bg-background min-h-screen text-text relative">
-      <ApolloProvider client={apolloClient}>
-        <AuthProvider>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
-        </AuthProvider>
-      </ApolloProvider>
+      <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+        <ApolloProviderWrapper>{children}</ApolloProviderWrapper>
+      </ClerkProvider>
     </div>
   );
 };
@@ -111,7 +152,7 @@ const AppProvider = ({ children }: { children: React.ReactNode }) => {
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <AppProvider><RootLayout /></AppProvider>,
+    element: <RootLayout />,
     children: [
       {
         index: true,
@@ -137,6 +178,10 @@ const router = createBrowserRouter([
         path: "auth/callback",
         element: <EmailConfirmationHandler />,
       },
+      {
+        path: "image-cache-test",
+        element: <ImageCacheTest />,
+      },
       // Protected routes
       {
         element: <AuthGuard />,
@@ -152,7 +197,15 @@ const router = createBrowserRouter([
 ]);
 
 const App = () => {
-  return <RouterProvider router={router} />;
+  useEffect(() => {
+    setupZodJapaneseErrorMap();
+  }, []);
+
+  return (
+    <AppProvider>
+      <RouterProvider router={router} />
+    </AppProvider>
+  );
 };
 
 export default App;

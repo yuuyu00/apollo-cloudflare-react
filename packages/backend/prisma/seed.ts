@@ -37,6 +37,7 @@ async function main() {
       data: {
         name: "Test User 1",
         email: "test1@example.com",
+        sub: "abcdefghijklmnop",
       },
     });
 
@@ -44,6 +45,7 @@ async function main() {
       data: {
         name: "Test User 2",
         email: "test2@example.com",
+        sub: "ponmlkjihgfedcba",
       },
     });
 

@@ -2,12 +2,21 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useMutation, useQuery } from "@apollo/client";
 import { gql } from "@apollo/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useAuth } from "@clerk/clerk-react";
 import { useToast } from "@/contexts/ToastContext";
 import { Field, Label, FieldGroup } from "@/components/ui/fieldset";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { ImageUpload, type UploadedImage } from "@/components/ImageUpload";
+import { uploadImage } from "@/utils/imageUpload";
+import {
+  createArticleSchema,
+  type CreateArticleFormData,
+} from "@/schemas/article";
+import type { GetCategoriesQuery } from "@/generated-graphql/graphql";
 
 const GET_CATEGORIES = gql`
   query GetCategories {
@@ -28,83 +37,134 @@ const CREATE_ARTICLE = gql`
         id
         name
       }
+      images {
+        id
+        key
+        size
+        type
+      }
     }
   }
 `;
 
+interface ImageInput {
+  key: string;
+  size: number;
+  type: string;
+}
+
 export const CreateArticle = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { showToast } = useToast();
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
+  const { getToken } = useAuth();
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
-  const [errors, setErrors] = useState<{ title?: string; content?: string }>(
-    {}
-  );
+  const [images, setImages] = useState<UploadedImage[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const { data: categoriesData } = useQuery(GET_CATEGORIES);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+  } = useForm<CreateArticleFormData>({
+    resolver: zodResolver(createArticleSchema),
+    defaultValues: {
+      title: "",
+      content: "",
+      categoryIds: [],
+    },
+  });
+
+  const { data: categoriesData } = useQuery<GetCategoriesQuery>(GET_CATEGORIES);
+
   const [createArticle, { loading }] = useMutation(CREATE_ARTICLE, {
     onCompleted: () => {
       showToast("記事を投稿しました", "success");
       navigate("/");
     },
     onError: (error) => {
-      console.error("記事の作成に失敗しました:", error);
+      console.error("Create article error:", error);
       showToast("記事の投稿に失敗しました", "error");
     },
   });
 
   useEffect(() => {
-    if (!user) {
-      navigate("/login");
+    setValue("categoryIds", selectedCategoryIds);
+  }, [selectedCategoryIds, setValue]);
+
+  useEffect(() => {
+    // Cleanup preview URLs on unmount
+    return () => {
+      images.forEach((image) => URL.revokeObjectURL(image.preview));
+    };
+  }, []);
+
+  const uploadImages = async (): Promise<ImageInput[]> => {
+    const uploadedImages: ImageInput[] = [];
+
+    for (const image of images) {
+      try {
+        const result = await uploadImage(
+          image.file,
+          import.meta.env.VITE_IMAGE_UPLOAD_URL,
+          getToken
+        );
+
+        uploadedImages.push({
+          key: result.key,
+          size: result.size,
+          type: result.type,
+        });
+      } catch (error) {
+        console.error("Failed to upload image:", error);
+        throw new Error(`画像のアップロードに失敗しました: ${image.file.name}`);
+      }
     }
-  }, [user, navigate]);
 
-  const validateForm = () => {
-    const newErrors: { title?: string; content?: string } = {};
-
-    if (!title.trim()) {
-      newErrors.title = "タイトルは必須項目です";
-    }
-
-    if (!content.trim()) {
-      newErrors.content = "本文は必須項目です";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return uploadedImages;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: CreateArticleFormData) => {
+    setIsUploading(true);
 
-    if (!validateForm()) {
-      return;
-    }
+    try {
+      // Upload images first if any
+      const uploadedImages: ImageInput[] =
+        images.length > 0 ? await uploadImages() : [];
 
-    if (!user) return;
-
-    await createArticle({
-      variables: {
-        input: {
-          title: title.trim(),
-          content: content.trim(),
-          categoryIds: selectedCategoryIds,
+      // Create article with uploaded image references
+      await createArticle({
+        variables: {
+          input: {
+            title: data.title.trim(),
+            content: data.content.trim(),
+            categoryIds: data.categoryIds,
+            images: uploadedImages,
+          },
         },
-      },
-    });
+      });
+    } catch (error) {
+      console.error("Submit error:", error);
+      showToast(
+        error instanceof Error ? error.message : "記事の投稿に失敗しました",
+        "error"
+      );
+    } finally {
+      setIsUploading(false);
+    }
   };
+
+  const isSubmitting = loading || isUploading;
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-background px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-title">新規記事投稿</h1>
         </div>
 
         <form
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmit(onSubmit)}
           className="space-y-6 bg-gray-900 p-8 rounded-lg shadow-lg"
         >
           <FieldGroup>
@@ -112,22 +172,22 @@ export const CreateArticle = () => {
               <Label htmlFor="title">タイトル *</Label>
               <Input
                 id="title"
-                name="title"
                 type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                {...register("title")}
                 placeholder="記事のタイトルを入力してください"
                 invalid={!!errors.title}
               />
-              {errors.title && (
-                <p className="mt-1 text-sm text-red-500">{errors.title}</p>
+              {errors.title?.message && (
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.title.message}
+                </p>
               )}
             </Field>
 
             <Field>
               <Label>カテゴリー</Label>
               <div className="flex flex-wrap gap-2">
-                {categoriesData?.categories.map((category: any) => {
+                {categoriesData?.categories.map((category) => {
                   const isSelected = selectedCategoryIds.includes(category.id);
                   return (
                     <button
@@ -170,25 +230,37 @@ export const CreateArticle = () => {
               <Label htmlFor="content">本文 *</Label>
               <Textarea
                 id="content"
-                name="content"
                 rows={10}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
+                {...register("content")}
                 placeholder="記事の本文を入力してください"
                 invalid={!!errors.content}
               />
-              {errors.content && (
-                <p className="mt-1 text-sm text-red-500">{errors.content}</p>
+              {errors.content?.message && (
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.content.message}
+                </p>
               )}
             </Field>
+
+            <ImageUpload
+              images={images}
+              onChange={setImages}
+              maxSize={1}
+              maxCount={10}
+              disabled={isSubmitting}
+            />
           </FieldGroup>
 
           <div className="flex items-center justify-between pt-6">
             <Button type="button" plain onClick={() => navigate("/")}>
               キャンセル
             </Button>
-            <Button type="submit" color="blue" disabled={loading}>
-              {loading ? "投稿中..." : "記事を投稿"}
+            <Button type="submit" color="blue" disabled={isSubmitting}>
+              {isUploading
+                ? "画像をアップロード中..."
+                : loading
+                  ? "記事を投稿中..."
+                  : "記事を投稿"}
             </Button>
           </div>
         </form>
