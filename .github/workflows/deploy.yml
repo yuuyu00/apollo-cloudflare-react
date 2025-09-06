@@ -29,12 +29,12 @@ jobs:
           DATABASE_URL: "file:./dev.db"
         run: pnpm --filter @apollo-cloudflare-react/backend generate
 
-      - name: Setup Backend wrangler.toml with account ID
+      - name: Setup Backend wrangler.jsonc with account ID
         run: |
           cd packages/backend
-          # wrangler.tomlにアカウントIDを動的に追加
-          sed -i '3a account_id = "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"' wrangler.toml
-          echo "Updated wrangler.toml with account ID"
+          # wrangler.jsoncにアカウントIDを動的に追加
+          sed -i '3a account_id = "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"' wrangler.jsonc
+          echo "Updated wrangler.jsonc with account ID"
 
       - name: Deploy Backend to Cloudflare Workers
         env:
@@ -68,12 +68,12 @@ jobs:
       - name: Generate Frontend Code
         run: pnpm --filter @apollo-cloudflare-react/frontend generate
 
-      - name: Setup Frontend wrangler.toml with account ID
+      - name: Setup Frontend wrangler.jsonc with account ID
         run: |
           cd packages/frontend
-          sed -i '3a account_id = "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"' wrangler.toml
-          echo "Updated wrangler.toml with account ID"
-          cat wrangler.toml
+          sed -i '3a account_id = "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"' wrangler.jsonc
+          echo "Updated wrangler.jsonc with account ID"
+          cat wrangler.jsonc
 
       - name: Deploy Frontend to Cloudflare Workers Static Assets
         env:

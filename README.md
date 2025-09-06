@@ -94,7 +94,7 @@ apollo-cloudflare-react/
 │   │   ├── schema/            # GraphQLスキーマファイル (.gql)
 │   │   ├── prisma/            # データベーススキーマ
 │   │   ├── migrations/        # D1マイグレーション
-│   │   └── wrangler.toml      # Cloudflare Workers設定
+│   │   └── wrangler.jsonc      # Cloudflare Workers設定
 │   │
 │   └── frontend/              # React SPA
 │       ├── src/
@@ -103,7 +103,7 @@ apollo-cloudflare-react/
 │       │   ├── screens/       # ページコンポーネント
 │       │   ├── contexts/      # React Contexts
 │       │   └── generated-graphql/ # 自動生成された型
-│       ├── wrangler.toml      # Static Assets設定
+│       ├── wrangler.jsonc      # Static Assets設定
 │       └── .env.development   # 開発環境設定
 │
 ├── .github/
@@ -171,7 +171,7 @@ apollo-cloudflare-react/
    pnpm wrangler d1 create apollo-cloudflare-db
    ```
 
-   作成されたIDで`wrangler.toml`の`database_id`を更新してください。
+   作成されたIDで`wrangler.jsonc`の`database_id`を更新してください。
 
 5. **データベースマイグレーションの適用**
 

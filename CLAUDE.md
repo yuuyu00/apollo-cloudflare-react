@@ -7,6 +7,7 @@ This document consolidates the project configuration, development procedures, an
 ### MANDATORY: When to Use Multiple Agents
 
 You MUST automatically decompose tasks and use multiple specialized agents when:
+
 - Task spans multiple layers (infrastructure, backend, frontend)
 - Creating new packages or workers
 - Implementing features requiring database, API, and UI changes
@@ -15,15 +16,19 @@ You MUST automatically decompose tasks and use multiple specialized agents when:
 ### Agent Responsibility Matrix
 
 #### infra-devops-developer
+
 **MUST USE FOR:**
+
 - Creating new Worker packages or any new packages under `packages/`
-- Configuring `wrangler.toml`, `package.json`, `tsconfig.json`
+- Configuring `wrangler.jsonc`, `package.json`, `tsconfig.json`
 - Setting up environment variables, build scripts, deployment configs
 - Turborepo/pnpm workspace configuration
 - R2 bucket, D1 database, or other Cloudflare service setup
 
-#### backend-developer  
+#### backend-developer
+
 **MUST USE FOR:**
+
 - Prisma schema modifications
 - D1 migrations creation and application
 - GraphQL schema definitions (`.gql` files)
@@ -33,7 +38,9 @@ You MUST automatically decompose tasks and use multiple specialized agents when:
 - Authentication/authorization logic
 
 #### frontend-developer
+
 **MUST USE FOR:**
+
 - React component creation
 - UI implementation with Catalyst UI Kit
 - GraphQL client integration (Apollo Client)
@@ -43,7 +50,9 @@ You MUST automatically decompose tasks and use multiple specialized agents when:
 - Frontend environment variables
 
 #### Reviewers & Validators
+
 **MUST USE AFTER IMPLEMENTATION:**
+
 - backend-reviewer: After backend changes
 - frontend-reviewer: After frontend changes
 - e2e-system-validator: After cross-package features
@@ -112,12 +121,14 @@ validation_phase_final:
 ### Common Patterns to ALWAYS Decompose
 
 1. **New Feature Implementation**
+
    - infra: Package/config setup
-   - backend: API implementation  
+   - backend: API implementation
    - frontend: UI implementation
    - validator: Integration testing
 
 2. **New Worker Creation**
+
    - infra: Package creation, wrangler config
    - backend: Business logic (if needed)
    - frontend: Environment variable updates
@@ -137,6 +148,7 @@ validation_phase_final:
 ### AUTOMATIC DECOMPOSITION TRIGGER
 
 When user request contains ANY of these keywords, MUST decompose:
+
 - "feature", "implement", "add", "create worker"
 - "upload", "authentication", "CRUD"
 - Tasks mentioning both "backend" and "frontend"
@@ -147,6 +159,7 @@ When user request contains ANY of these keywords, MUST decompose:
 When user includes "use-agents" in their request, follow this MANDATORY workflow:
 
 1. **PLANNING PHASE** (You do this first):
+
    - Analyze the complete requirements
    - Create detailed implementation plan
    - Identify all necessary components
@@ -155,6 +168,7 @@ When user includes "use-agents" in their request, follow this MANDATORY workflow
    - Present the plan to user in structured format
 
 2. **TASK DECOMPOSITION** (After plan approval):
+
    ```yaml
    execution_plan:
      phase_1_parallel:
@@ -164,13 +178,13 @@ When user includes "use-agents" in their request, follow this MANDATORY workflow
        - agent: backend-developer
          tasks: [specific_task_3, specific_task_4]
          deliverables: [schema_1, migration_1]
-     
+
      phase_2_sequential:
        - agent: frontend-developer
          tasks: [specific_task_5]
          depends_on: [phase_1.deliverables]
          deliverables: [component_1, integration_1]
-     
+
      phase_3_validation:
        - agent: e2e-system-validator
          tasks: [integration_test, requirements_verification]
@@ -178,6 +192,7 @@ When user includes "use-agents" in their request, follow this MANDATORY workflow
    ```
 
 3. **EXECUTION** (Launch agents with specific instructions):
+
    - Each agent receives ONLY their specific tasks
    - Include context from previous phases
    - Specify expected deliverables
@@ -193,6 +208,7 @@ When user includes "use-agents" in their request, follow this MANDATORY workflow
 **Example Usage**: "use-agents to implement user profile picture upload with image optimization"
 
 This triggers:
+
 1. First, present complete plan to user
 2. Upon approval, execute via multiple specialized agents
 3. Coordinate results and validate integration
@@ -246,12 +262,12 @@ apollo-cloudflare-react/
 │   │   │   └── *.gql
 │   │   ├── scripts/             # Build scripts
 │   │   │   └── generate-schema.js
-│   │   ├── wrangler.toml        # Wrangler v4 configuration
+│   │   ├── wrangler.jsonc        # Wrangler v4 configuration
 │   │   ├── .dev.vars           # Local development environment variables
 │   │   └── .env                # Prisma CLI configuration
 │   └── frontend/                # React + Vite (Cloudflare Workers Static Assets)
 │       ├── src/
-│       ├── wrangler.toml        # Workers configuration
+│       ├── wrangler.jsonc        # Workers configuration
 │       ├── .env                # Local development
 │       ├── .env.development     # Development deployment
 │       └── .env.production      # Production deployment
@@ -296,6 +312,7 @@ CORS_ORIGIN=http://localhost:5000
 **Frontend Environment Variables**
 
 Vite loads environment variable files in the following priority:
+
 1. `.env.local` - Highest priority in all environments (gitignored)
 2. `.env.[mode]` - Mode-specific files (e.g., .env.development)
 3. `.env` - Default settings
@@ -343,7 +360,7 @@ VITE_GRAPHQL_ENDPOINT=http://localhost:8787/graphql
 cd packages/backend
 pnpm wrangler d1 create apollo-cloudflare-db
 
-# Update database_id in wrangler.toml with the ID displayed during creation
+# Update database_id in wrangler.jsonc with the ID displayed during creation
 # database_id = "c370ca69-c11d-4d00-9fd0-b7339850fd30"
 
 # Check migration status
@@ -482,6 +499,7 @@ SELECT * FROM User;  # View data
 #### 3. GUI SQLite Tools
 
 Open SQLite files visually with:
+
 - **TablePlus** (macOS/Windows/Linux)
 - **DB Browser for SQLite** (Free)
 - **VS Code Extension**: SQLite Viewer
@@ -499,7 +517,8 @@ pnpm prisma-studio
 # Open http://localhost:5555 in browser
 ```
 
-**Note**: 
+**Note**:
+
 - D1 database must be initialized with `pnpm dev` beforehand
 - Database file may be locked while Prisma Studio is running
 
@@ -552,15 +571,18 @@ pnpm deploy:prod  # Uses .env.production for build
 ### Important Changes
 
 1. **node_compat → nodejs_compat**
+
    - `node_compat = true` is deprecated
    - Use `compatibility_flags = ["nodejs_compat"]`
 
 2. **Removed Settings**
+
    - `[upload]` section
    - `[build].watch_paths`
    - `[tsconfig]` section (managed in tsconfig.json)
 
 3. **Entry Point**
+
    - `src/index.ts` is required (Cloudflare Workers format)
    - Express-style `server.ts` cannot be used
    - Must `export default` fetch handler
@@ -619,6 +641,7 @@ Catalyst is a modern UI kit developed by the Tailwind CSS team, providing 26 Rea
 ### Available Components
 
 #### Basic Elements
+
 - **Button**: Primary, secondary, ghost variations
 - **Input**: Text input fields
 - **Badge**: Status or label display
@@ -626,26 +649,31 @@ Catalyst is a modern UI kit developed by the Tailwind CSS team, providing 26 Rea
 - **Text/Heading**: Typography components
 
 #### Form Controls
+
 - **Checkbox/Radio**: Selection controls
 - **Switch**: Toggle switches
 - **Textarea**: Multi-line text input
 - **Field/FieldGroup/Label**: Form structure components
 
 #### Navigation
+
 - **Sidebar/Navbar**: Application navigation
 - **Dropdown**: Dropdown menus
 - **Pagination**: Page navigation
 
 #### Layouts
+
 - **SidebarLayout**: Layout with sidebar
 - **StackedLayout**: Stacked layout
 - **AuthLayout**: Authentication screen layout
 
 #### Overlays
+
 - **Dialog**: Modal dialogs
 - **Alert**: Alert displays
 
 #### Data Display
+
 - **Table**: Table component
 - **DescriptionList**: Description lists
 - **Listbox/Combobox**: Selection lists
@@ -654,9 +682,9 @@ Catalyst is a modern UI kit developed by the Tailwind CSS team, providing 26 Rea
 
 ```jsx
 // Import components
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Field, FieldGroup, Label } from '@/components/ui/fieldset'
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Field, FieldGroup, Label } from "@/components/ui/fieldset";
 
 // Usage example
 function ExampleForm() {
@@ -674,14 +702,14 @@ function ExampleForm() {
         <Button type="submit">Save</Button>
       </FieldGroup>
     </form>
-  )
+  );
 }
 ```
 
 ### Technical Specifications
 
 - **Tailwind CSS**: v4.0+ required
-- **Dependencies**: 
+- **Dependencies**:
   - `@headlessui/react`: Accessibility-ready UI primitives
   - `framer-motion`: Animations
   - `clsx`: Conditional class name joining
@@ -696,22 +724,34 @@ function ExampleForm() {
 ### GraphQL Integration Example
 
 ```jsx
-import { useState } from 'react'
-import { useQuery, useMutation } from '@apollo/client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Dialog, DialogActions, DialogBody, DialogTitle } from '@/components/ui/dialog'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { useState } from "react";
+import { useQuery, useMutation } from "@apollo/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 function ArticleManager() {
-  const [isOpen, setIsOpen] = useState(false)
-  const { data, loading } = useQuery(GET_ARTICLES)
-  const [createArticle] = useMutation(CREATE_ARTICLE)
+  const [isOpen, setIsOpen] = useState(false);
+  const { data, loading } = useQuery(GET_ARTICLES);
+  const [createArticle] = useMutation(CREATE_ARTICLE);
 
   return (
     <>
       <Button onClick={() => setIsOpen(true)}>Create New Article</Button>
-      
+
       <Table>
         <TableHead>
           <TableRow>
@@ -720,7 +760,7 @@ function ArticleManager() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {data?.articles.map(article => (
+          {data?.articles.map((article) => (
             <TableRow key={article.id}>
               <TableCell>{article.title}</TableCell>
               <TableCell>{article.createdAt}</TableCell>
@@ -741,7 +781,7 @@ function ArticleManager() {
         </DialogActions>
       </Dialog>
     </>
-  )
+  );
 }
 ```
 
@@ -807,12 +847,14 @@ The Backend of this project uses a simple 2-layer architecture suitable for the 
 ### Layer Structure
 
 1. **Repositories Layer** (`src/repositories/`)
+
    - **Responsibility**: Pure database operations
    - Thin wrapper around Prisma client
    - Returns Prisma models as-is (no type conversion)
    - Can freely add business-specific methods
 
 2. **Services Layer** (`src/services/`)
+
    - **Responsibility**: Business logic
    - Permission checks
    - Input validation
@@ -830,16 +872,16 @@ The Backend of this project uses a simple 2-layer architecture suitable for the 
 // Repository - Data access
 export class ArticleRepository {
   constructor(private prisma: PrismaClient) {}
-  
+
   async findById(id: number): Promise<Article | null> {
     return this.prisma.article.findUnique({ where: { id } });
   }
-  
+
   // Business-specific methods
   async findPublishedByUserId(userId: number): Promise<Article[]> {
     return this.prisma.article.findMany({
-      where: { userId, status: 'PUBLISHED' },
-      orderBy: { createdAt: 'desc' }
+      where: { userId, status: "PUBLISHED" },
+      orderBy: { createdAt: "desc" },
     });
   }
 }
@@ -852,12 +894,12 @@ export class ArticleService {
     userId: number
   ): Promise<Article> {
     const article = await this.articleRepo.findById(id);
-    
+
     // Permission check
     if (article.userId !== userId) {
       throw new GraphQLError("You don't have permission");
     }
-    
+
     return this.articleRepo.update(id, input);
   }
 }
@@ -866,7 +908,11 @@ export class ArticleService {
 export const updateArticle = async (_parent, { input }, { services, user }) => {
   const authenticatedUser = requireAuth(user);
   // Get userId from Clerk publicMetadata (no DB access)
-  return services.article.updateArticle(input.id, input, authenticatedUser.userId);
+  return services.article.updateArticle(
+    input.id,
+    input,
+    authenticatedUser.userId
+  );
 };
 
 // Trivial Resolver - Lazy loading relations
@@ -876,7 +922,7 @@ export const Article: ArticleResolvers = {
       .findUnique({ where: { id: parent.id } })
       .categories();
     return categories || [];
-  }
+  },
 };
 ```
 
@@ -888,7 +934,7 @@ import { GraphQLError } from "graphql";
 
 export function notFoundError(resource: string, id: string) {
   return new GraphQLError(`${resource} with ID ${id} not found`, {
-    extensions: { code: 'NOT_FOUND' }
+    extensions: { code: "NOT_FOUND" },
   });
 }
 ```
@@ -898,10 +944,12 @@ export function notFoundError(resource: string, id: string) {
 ### Comment Guidelines
 
 **Avoid Obvious Comments**:
+
 ```typescript
 // ❌ Bad examples
 const user = await getUser(); // Get user
-if (!user) { // If user doesn't exist
+if (!user) {
+  // If user doesn't exist
   throw new Error(); // Throw error
 }
 
@@ -915,6 +963,7 @@ const container = createContainer(prisma);
 ```
 
 **Good Comments (Explain Why/Intent)**:
+
 ```typescript
 // ✅ Good examples
 // Consider Worker execution time limit (30 seconds)
@@ -936,12 +985,14 @@ const dbUser = await getUserBySub(authUser.sub);
 ### General Coding Rules
 
 1. **TypeScript Usage**
+
    - **`any` type is prohibited** - Use proper type definitions
      - Exception: Only in catch clauses with type guards
    - No explicit type annotations when inference works
    - Use unknown type and narrow with type guards
 
 2. **Error Handling**
+
    - **Never throw GraphQLError directly** - Always use error functions from `src/errors/index.ts`
      - `notFoundError()` - Resource not found
      - `validationError()` - Validation errors
@@ -950,6 +1001,7 @@ const dbUser = await getUserBySub(authUser.sub);
    - Write specific error messages
 
 3. **Function/Variable Names**
+
    - Use clear, intentional names
    - Avoid abbreviations (e.g., `usr` → `user`)
 
@@ -960,6 +1012,7 @@ const dbUser = await getUserBySub(authUser.sub);
 ## Development Flow
 
 1. **Feature Development**
+
    - Update GraphQL schema (`packages/backend/schema/*.gql`)
    - Generate types with `pnpm generate`
    - Implement services (business logic)
@@ -968,6 +1021,7 @@ const dbUser = await getUserBySub(authUser.sub);
    - Implement frontend
 
 2. **Database Changes**
+
    - Update Prisma schema (`packages/backend/prisma/schema.prisma`)
    - Create migration files (`packages/backend/migrations/`)
    - Apply to remote with `pnpm d1:migrations:apply:remote`
@@ -998,7 +1052,7 @@ const dbUser = await getUserBySub(authUser.sub);
 
 ## Workers Static Assets Configuration
 
-Important Frontend `wrangler.toml` settings:
+Important Frontend `wrangler.jsonc` settings:
 
 ```toml
 # Cloudflare Workers with Static Assets configuration

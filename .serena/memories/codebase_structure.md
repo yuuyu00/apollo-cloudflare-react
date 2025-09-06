@@ -1,6 +1,7 @@
 # Codebase Structure
 
 ## Project Root Structure
+
 ```
 apollo-cloudflare-react/
 ├── packages/               # Monorepo packages
@@ -18,6 +19,7 @@ apollo-cloudflare-react/
 ```
 
 ## Backend Package Structure
+
 ```
 packages/backend/
 ├── src/
@@ -76,7 +78,7 @@ packages/backend/
 ├── scripts/             # Build scripts
 │   └── generate-schema.js
 │
-├── wrangler.toml        # Cloudflare Workers config
+├── wrangler.jsonc        # Cloudflare Workers config
 ├── .dev.vars           # Local environment variables
 ├── .env                # Prisma configuration
 ├── package.json        # Package scripts
@@ -85,6 +87,7 @@ packages/backend/
 ```
 
 ## Frontend Package Structure
+
 ```
 packages/frontend/
 ├── src/
@@ -121,7 +124,7 @@ packages/frontend/
 │       └── (various utilities)
 │
 ├── public/              # Static assets
-├── wrangler.toml       # Workers config for static assets
+├── wrangler.jsonc       # Workers config for static assets
 ├── vite.config.ts      # Vite build config
 ├── tailwind.config.js  # Tailwind CSS config
 ├── codegen.ts          # GraphQL codegen config
@@ -136,20 +139,24 @@ packages/frontend/
 ## Key Files to Know
 
 ### Configuration Files
+
 - `turbo.json` - Defines build pipeline and task dependencies
 - `pnpm-workspace.yaml` - Defines monorepo structure
-- `wrangler.toml` - Cloudflare Workers deployment config
+- `wrangler.jsonc` - Cloudflare Workers deployment config
 - `codegen.yml` - GraphQL code generation config
 
 ### Entry Points
+
 - `packages/backend/src/index.ts` - Backend server entry
 - `packages/frontend/src/index.tsx` - Frontend app entry
 
 ### Schema Files
+
 - `packages/backend/prisma/schema.prisma` - Database schema
 - `packages/backend/schema/*.gql` - GraphQL type definitions
 
 ### Generated Files (DO NOT EDIT)
+
 - `packages/backend/src/schema.ts`
 - `packages/backend/src/gqlTypes.ts`
 - `packages/backend/schema/schema.gql`
@@ -158,6 +165,7 @@ packages/frontend/
 ## Package Dependencies
 
 ### Backend Key Dependencies
+
 - @apollo/server - GraphQL server
 - @as-integrations/cloudflare-workers - Apollo-Workers integration
 - @prisma/client + @prisma/adapter-d1 - Database ORM
@@ -165,6 +173,7 @@ packages/frontend/
 - wrangler - Cloudflare Workers CLI
 
 ### Frontend Key Dependencies
+
 - react + react-dom - UI framework
 - @apollo/client - GraphQL client
 - @clerk/clerk-react - Authentication UI
@@ -175,16 +184,20 @@ packages/frontend/
 ## Important Patterns
 
 ### Dependency Injection (Backend)
+
 Services and repositories are instantiated in context.ts and passed through GraphQL context.
 
 ### Lazy Loading Relations
+
 Related data is loaded on-demand using trivial resolvers rather than eager loading.
 
 ### Environment-Specific Configs
+
 - Local: `.dev.vars` (backend), `.env` (frontend)
-- Deployment: `wrangler.toml` environments, `.env.*` files
+- Deployment: `wrangler.jsonc` environments, `.env.*` files
 
 ### Code Generation Flow
+
 1. Define GraphQL schema in `.gql` files
 2. Run `pnpm generate` to create TypeScript types
 3. Types are shared between frontend and backend
