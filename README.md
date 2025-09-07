@@ -4,10 +4,11 @@ Cloudflare Workers上で動作するApollo Server、React、Clerk Authを統合�
 
 ## 概要
 
-このプロジェクトは以下の技術を使用した本番環境対応のアーキテクチャを実装しています。
+このプロジェクトは以下の技術を使用したアーキテクチャを実装しています。
 
 - **バックエンド**: Cloudflare Workers上で動作するApollo GraphQL ServerとD1データベース
 - **フロントエンド**: Cloudflare Workers Static Assetsとしてデプロイされた React SPA
+- **画像処理**: Cloudflare Workers上で動作する画像アップロード・最適化Worker
 - **認証**: Clerk Authによる認証・認可
 - **インフラ**: Cloudflareのエッジネットワーク上で完全サーバーレス
 
@@ -43,6 +44,10 @@ Cloudflare D1 (SQLite)
     ・ユーザー登録/ログイン
     ・JWTトークン生成
     ・OAuthプロバイダーサポート
+    
+    Cloudflare KV
+    ・キャッシュストレージ
+    ・セッション管理
 ```
 
 ## 技術スタック
@@ -66,8 +71,10 @@ Cloudflare D1 (SQLite)
 
 ### 開発ツール
 
-- **モノレポ管理**: Turborepo + pnpm workspaces
-- **パッケージマネージャー**: pnpm v8.14.0
+- **モノレポ管理**: Turborepo v2.5.4 + pnpm workspaces
+- **パッケージマネージャー**: pnpm v8.14.0（package.jsonで固定）
+- **Node.js**: v22.11.0（Voltaで管理）
+- **Wrangler**: v4.34.0
 - **コード生成**: GraphQL Code Generator
 - **型安全性**: エンドツーエンドのTypeScript
 - **CI/CD**: GitHub Actions
@@ -90,27 +97,50 @@ apollo-cloudflare-react/
 │   │   │   ├── errors/         # エラー定義
 │   │   │   ├── context.ts      # GraphQLコンテキスト
 │   │   │   ├── db.ts          # Prismaクライアント設定
-│   │   │   └── auth.ts        # Clerk JWT検証
+│   │   │   ├── auth.ts        # Clerk JWT検証
+│   │   │   ├── schema.ts      # GraphQLスキーマ（自動生成）
+│   │   │   ├── gqlTypes.ts    # GraphQL型定義（自動生成）
+│   │   │   └── types.ts       # 共通型定義
 │   │   ├── schema/            # GraphQLスキーマファイル (.gql)
+│   │   │   └── schema.gql     # 結合スキーマ（自動生成）
 │   │   ├── prisma/            # データベーススキーマ
+│   │   │   └── schema.prisma  # Prismaスキーマ
 │   │   ├── migrations/        # D1マイグレーション
-│   │   └── wrangler.jsonc      # Cloudflare Workers設定
+│   │   ├── scripts/           # ビルドスクリプト
+│   │   │   └── generate-schema.js
+│   │   ├── wrangler.jsonc      # Cloudflare Workers設定
+│   │   ├── .dev.vars.example  # ローカル開発用環境変数サンプル
+│   │   └── codegen.yml        # GraphQL Code Generator設定
 │   │
-│   └── frontend/              # React SPA
+│   ├── frontend/              # React SPA
+│   │   ├── src/
+│   │   │   ├── components/    # Reactコンポーネント
+│   │   │   │   └── ui/        # Catalyst UIコンポーネント
+│   │   │   ├── screens/       # ページコンポーネント
+│   │   │   ├── contexts/      # React Contexts
+│   │   │   └── generated-graphql/ # 自動生成された型
+│   │   ├── public/            # 静的ファイル
+│   │   ├── wrangler.jsonc      # Static Assets設定
+│   │   ├── .env.example       # 環境変数サンプル
+│   │   ├── .env.staging       # ステージング環境設定
+│   │   ├── .env.production    # 本番環境設定
+│   │   ├── vite.config.ts     # Vite設定
+│   │   └── codegen.ts         # GraphQL Code Generator設定
+│   │
+│   └── images-worker/         # 画像処理Worker
 │       ├── src/
-│       │   ├── components/    # Reactコンポーネント
-│       │   │   └── ui/        # Catalyst UIコンポーネント
-│       │   ├── screens/       # ページコンポーネント
-│       │   ├── contexts/      # React Contexts
-│       │   └── generated-graphql/ # 自動生成された型
-│       ├── wrangler.jsonc      # Static Assets設定
-│       └── .env.development   # 開発環境設定
+│       │   └── index.ts       # Workersエントリーポイント
+│       ├── wrangler.jsonc      # Workers設定
+│       └── README.md          # 画像Worker説明
 │
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml         # CI/CDパイプライン
 ├── turbo.json                 # Turborepo設定
 ├── pnpm-workspace.yaml        # pnpmワークスペース設定
+├── package.json               # ルートパッケージ設定
+├── tsconfig.json              # TypeScript設定
+├── CLAUDE.md                  # プロジェクトドキュメント
 └── README.md                  # このファイル
 ```
 
@@ -118,8 +148,8 @@ apollo-cloudflare-react/
 
 ### 前提条件
 
-- Node.js v22.11.0 (LTS)
-- pnpm v8.14.0以上
+- Node.js v22.11.0（Voltaで管理推奨）
+- pnpm v8.14.0（package.jsonで固定）
 - Cloudflareアカウント
 - Clerkアカウント
 
@@ -140,24 +170,26 @@ apollo-cloudflare-react/
 
 3. **環境変数の設定**
 
-   バックエンド (`packages/backend/.dev.vars`):
+   バックエンド (`packages/backend/.dev.vars` - `.dev.vars.example`をコピー):
 
    ```
    CLERK_SECRET_KEY=sk_test_xxxxxxxxxxxxx
    CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxx
-   CLERK_PEM_PUBLIC_KEY=-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQE...\n-----END PUBLIC KEY-----
+   CLERK_PEM_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQE...\n-----END PUBLIC KEY-----"
    GRAPHQL_INTROSPECTION=true
    GRAPHQL_PLAYGROUND=true
    CORS_ORIGIN=http://localhost:5000
    ```
 
-   バックエンド (`packages/backend/.env`):
+   注: CLERK_PEM_PUBLIC_KEYはClerkダッシュボード > API Keys > Show JWT Public Key > PEM Public Keyから取得
+
+   バックエンド (`packages/backend/.env` - Prisma CLI用):
 
    ```
    DATABASE_URL="file:./dev.db"
    ```
 
-   フロントエンド (`packages/frontend/.env`):
+   フロントエンド (`.env.example`をコピーして`.env`を作成):
 
    ```
    VITE_GRAPHQL_ENDPOINT=http://localhost:8787/graphql
@@ -166,21 +198,29 @@ apollo-cloudflare-react/
 
 4. **Cloudflare D1データベースの作成**
 
+   開発環境用:
    ```bash
    cd packages/backend
-   pnpm wrangler d1 create apollo-cloudflare-db
+   pnpm wrangler d1 create apollo-cloudflare-db --env dev
    ```
 
-   作成されたIDで`wrangler.jsonc`の`database_id`を更新してください。
+   本番環境用:
+   ```bash
+   pnpm wrangler d1 create apollo-cloudflare-db-prod --env prod
+   ```
+
+   作成されたIDで`wrangler.jsonc`の対応する環境の`database_id`を更新してください。
 
 5. **データベースマイグレーションの適用**
 
    ```bash
-   # ローカル環境
-   pnpm d1:migrations:apply
+   # 開発環境
+   pnpm d1:migrations:apply:local  # ローカル
+   pnpm d1:migrations:apply:dev    # リモート開発
 
-   # リモート環境
-   pnpm d1:migrations:apply:remote
+   # 本番環境
+   pnpm d1:migrations:apply:prod:local  # ローカル
+   pnpm d1:migrations:apply:prod       # リモート本番
    ```
 
 6. **コード生成**
@@ -217,8 +257,17 @@ cd packages/frontend && pnpm dev
 2. **データベーススキーマの変更**
 
    - `packages/backend/prisma/schema.prisma`を更新
-   - マイグレーション作成: `pnpm d1:migrations:create <name>`
-   - ローカルに適用: `pnpm d1:migrations:apply`
+   - マイグレーション作成:
+     ```bash
+     cd packages/backend
+     pnpm d1:migrations:create:dev <name>   # 開発環境用
+     pnpm d1:migrations:create:prod <name>  # 本番環境用
+     ```
+   - マイグレーション適用:
+     ```bash
+     pnpm d1:migrations:apply:local  # ローカル開発
+     pnpm d1:migrations:apply:dev    # リモート開発
+     ```
    - Prismaクライアント生成: `pnpm prisma generate`
 
 3. **フロントエンド開発**
@@ -248,13 +297,20 @@ pnpm build
 ### 手動デプロイ
 
 ```bash
-# バックエンドのデプロイ
+# 全パッケージのデプロイ（プロジェクトルートから）
+pnpm deploy:dev    # 開発環境
+pnpm deploy:prod   # 本番環境
+
+# 個別パッケージのデプロイ
 cd packages/backend
 pnpm deploy:dev    # 開発環境
 pnpm deploy:prod   # 本番環境
 
-# フロントエンドのデプロイ
 cd packages/frontend
+pnpm deploy:dev    # 開発環境（.env.stagingを使用）
+pnpm deploy:prod   # 本番環境（.env.productionを使用）
+
+cd packages/images-worker
 pnpm deploy:dev    # 開発環境
 pnpm deploy:prod   # 本番環境
 ```
@@ -263,12 +319,75 @@ pnpm deploy:prod   # 本番環境
 
 GitHub Actionsによる自動デプロイが設定されています。
 
+**トリガー:**
 - `develop`ブランチへのプッシュ: 開発環境へデプロイ
 - `main`ブランチへのプッシュ: 本番環境へデプロイ
+- 手動実行 (`workflow_dispatch`): 環境を選択してデプロイ
 
-必要なGitHub Secrets:
+**必要なGitHub Secrets:**
 
-- `CLOUDFLARE_API_TOKEN`
-- `CLOUDFLARE_ACCOUNT_ID`
-- `CLERK_SECRET_KEY`
-- `CLERK_PEM_PUBLIC_KEY`
+- `CLOUDFLARE_API_TOKEN`: Cloudflare APIトークン
+- `CLOUDFLARE_ACCOUNT_ID`: CloudflareアカウントID
+
+注: Clerk関連の環境変数は各Workerに個別に設定する必要があります:
+
+```bash
+# バックエンドWorkerの秘密環境変数設定
+cd packages/backend
+pnpm wrangler secret put CLERK_SECRET_KEY --env dev
+pnpm wrangler secret put CLERK_PEM_PUBLIC_KEY --env dev
+```
+
+## トラブルシューティング
+
+### データベース関連
+
+**D1マイグレーションの確認:**
+```bash
+cd packages/backend
+# 未適用のマイグレーション確認
+pnpm d1:migrations:list:local      # ローカル開発
+pnpm d1:migrations:list:dev        # リモート開発
+pnpm d1:migrations:list:prod:local # ローカル本番
+pnpm d1:migrations:list:prod       # リモート本番
+
+# テーブル確認
+pnpm d1:execute:local --command "SELECT name FROM sqlite_master WHERE type='table';"
+```
+
+**Prisma Studioでのデータ確認:**
+```bash
+cd packages/backend
+pnpm prisma-studio
+# http://localhost:5555 でアクセス
+```
+
+### 型エラー
+
+```bash
+# 型定義ファイルのクリーンアップと再生成
+rm -rf packages/backend/src/gqlTypes.ts packages/backend/src/schema.ts
+rm -rf packages/frontend/src/generated-graphql
+pnpm generate
+```
+
+### ビルドエラー
+
+```bash
+# キャッシュクリア
+pnpm clean
+pnpm install
+pnpm generate
+pnpm build
+```
+
+## 参考リンク
+
+- [Cloudflare D1 Documentation](https://developers.cloudflare.com/d1/)
+- [Cloudflare Workers Documentation](https://developers.cloudflare.com/workers/)
+- [Wrangler CLI Documentation](https://developers.cloudflare.com/workers/wrangler/)
+- [Prisma D1 Adapter](https://www.prisma.io/docs/orm/overview/databases/cloudflare-d1)
+- [Apollo Server Cloudflare Workers Integration](https://www.apollographql.com/docs/apollo-server/deployment/cloudflare-workers)
+- [Clerk Authentication Documentation](https://clerk.com/docs)
+- [Catalyst UI Kit](https://catalyst.tailwindui.com/docs)
+- [Turborepo Documentation](https://turbo.build/repo/docs)
