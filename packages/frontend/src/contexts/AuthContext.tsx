@@ -29,6 +29,12 @@ interface SignUpResult {
   result?: SignUpResource;
 }
 
+// Waitlist result type
+interface WaitlistResult {
+  status: "joined" | "error";
+  message: string;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -38,6 +44,7 @@ interface AuthContextType {
   verifyEmail: (code: string) => Promise<void>;
   signOut: () => Promise<void>;
   signUpState: SignUpResource | null;
+  joinWaitlist: (email: string) => Promise<WaitlistResult>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -183,6 +190,53 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     window.location.href = "/login";
   };
 
+  const joinWaitlist = async (email: string): Promise<WaitlistResult> => {
+    try {
+      await clerk.joinWaitlist({ emailAddress: email });
+      return {
+        status: "joined",
+        message:
+          "ウェイトリストへの登録が完了しました。\n招待メールをお待ちください。",
+      };
+    } catch (error) {
+      if (error && typeof error === "object") {
+        if ("errors" in error) {
+          const clerkError = error as {
+            errors?: Array<{ message?: string; code?: string }>;
+          };
+          const errorMessage = clerkError.errors?.[0]?.message;
+          const errorCode = clerkError.errors?.[0]?.code;
+
+          // Handle specific error codes
+          if (errorCode === "form_identifier_exists") {
+            return {
+              status: "error",
+              message:
+                "このメールアドレスは既にウェイトリストに登録されています。",
+            };
+          }
+
+          return {
+            status: "error",
+            message: errorMessage || "ウェイトリストへの登録に失敗しました。",
+          };
+        }
+        if ("message" in error) {
+          return {
+            status: "error",
+            message:
+              (error as Error).message ||
+              "ウェイトリストへの登録に失敗しました。",
+          };
+        }
+      }
+      return {
+        status: "error",
+        message: "ウェイトリストへの登録に失敗しました。",
+      };
+    }
+  };
+
   const value = {
     user,
     session,
@@ -192,6 +246,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     verifyEmail,
     signOut,
     signUpState: clerkSignUp || null,
+    joinWaitlist,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
