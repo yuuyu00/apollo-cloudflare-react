@@ -34,3 +34,9 @@ export const profileSchema = z.object({
 });
 
 export type ProfileFormData = z.infer<typeof profileSchema>;
+
+export const waitlistSchema = z.object({
+  email: z.string().min(1, "メールアドレスを入力してください").email("有効なメールアドレスを入力してください"),
+});
+
+export type WaitlistFormData = z.infer<typeof waitlistSchema>;
