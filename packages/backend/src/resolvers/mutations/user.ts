@@ -16,8 +16,9 @@ export const signUp: MutationResolvers["signUp"] = async (
   });
 
   try {
+    const secretKey = await env.CLERK_SECRET_KEY.get();
     const clerkClient = createClerkClient({
-      secretKey: env.CLERK_SECRET_KEY,
+      secretKey,
       publishableKey: env.CLERK_PUBLISHABLE_KEY,
     });
 

@@ -3,6 +3,10 @@ import { useQuery } from "@apollo/client";
 import { GET_ARTICLE } from "../graphql/queries/articles";
 import { useState } from "react";
 import { getImageUrl } from "../utils/image";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 export const ArticleDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -57,7 +61,7 @@ export const ArticleDetail = () => {
         ← 記事一覧に戻る
       </Link>
 
-      <article className="bg-gray-800 p-8 rounded-lg shadow-md">
+      <article className="bg-gray-900 p-8 rounded-lg shadow-md">
         <h1 className="text-3xl font-bold mb-4">{article.title}</h1>
 
         <div className="text-sm text-gray-500 mb-6">
@@ -75,8 +79,39 @@ export const ArticleDetail = () => {
           ))}
         </div>
 
-        <div className="prose prose-lg max-w-none">
-          <p className="whitespace-pre-wrap mb-8">{article.content}</p>
+        <div className="markdown-content">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              // @ts-ignore
+              code({ node, inline, className, children, ...props }) {
+                const match = /language-(\w+)/.exec(className || "");
+                return !inline && match ? (
+                  <SyntaxHighlighter
+                    // @ts-ignore
+                    style={vscDarkPlus}
+                    language={match[1]}
+                    PreTag="div"
+                    customStyle={{
+                      backgroundColor: "#0d1117",
+                      margin: 0,
+                      padding: "1rem",
+                      borderRadius: "0.5rem",
+                    }}
+                    {...props}
+                  >
+                    {String(children).replace(/\n$/, "")}
+                  </SyntaxHighlighter>
+                ) : (
+                  <code className={className} {...props}>
+                    {children}
+                  </code>
+                );
+              },
+            }}
+          >
+            {article.content}
+          </ReactMarkdown>
 
           {/* Display images if available */}
           {article.images && article.images.length > 0 && (

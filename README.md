@@ -14,6 +14,8 @@ Cloudflare Workers上で動作するApollo Server、React、Clerk Authを統合�
 
 ## アーキテクチャ
 
+### メインアーキテクチャ
+
 ```
 クライアントブラウザ
     │
@@ -28,27 +30,83 @@ Apollo Server (Cloudflare Workers)
     │
     ├─── GraphQLスキーマ & リゾルバー
     ├─── Services層 (ビジネスロジック)
-    ├─── Repositories層 (データアクセス)
+    ├─── Repositories層 (データアクセス + KVキャッシュ)
     ├─── Clerk JWT検証
     └─── Prisma ORM (D1 Adapter)
     │
-    │ SQLクエリ
-    ▼
-Cloudflare D1 (SQLite)
-    ・ユーザーデータ
-    ・記事コンテンツ
-    ・カテゴリ管理
-
-外部サービス:
-    Clerk Auth
-    ・ユーザー登録/ログイン
-    ・JWTトークン生成
-    ・OAuthプロバイダーサポート
-    
-    Cloudflare KV
-    ・キャッシュストレージ
-    ・セッション管理
+    ├── D1 Database ─── SQLクエリ実行
+    │   ・ユーザーデータ
+    │   ・記事コンテンツ  
+    │   ・カテゴリ管理
+    │
+    └── KV Namespace (CACHE_KV) ─── キャッシュ読み書き
+        ・記事データ (単体: 2時間、一覧: 1時間)
+        ・カテゴリデータ (24時間)
+        ・ユーザーデータ (単体: 1時間、一覧: 30分)
 ```
+
+### 画像処理アーキテクチャ
+
+```
+画像アップロードフロー:
+
+クライアント
+    │
+    │ 画像アップロード (multipart/form-data + JWT)
+    ▼
+Images Worker (Cloudflare Workers)
+    │
+    ├── Clerk JWT検証
+    │   ・トークン検証
+    │   ・ユーザー権限確認
+    │
+    └── R2 Bucket (IMAGES_BUCKET)
+        ・原画像永続保存
+        ・キーパス: images/articles/{userId}/{filename}
+
+画像配信フロー:
+
+/images/articles/{userId}/{filename}?type=thumb
+    ↓
+Images Worker
+    ↓
+1. Cache API確認 (Worker Cache)
+    ├─ HIT → キャッシュから配信
+    └─ MISS ↓
+2. R2から原画像取得
+    ↓
+3. Images API (IMAGES_API binding)で変換
+    ・プリセット変換 (content: 800px, thumb: 300x200px)
+    ・WebP形式出力
+    ・品質最適化
+    ↓
+4. レスポンス生成
+    ・Cache-Control: 1年 (immutable)
+    ・CDN-Cache-Control: 1年
+    ・ETag付与
+    ↓
+5. Cache APIに保存 (ctx.waitUntil)
+```
+
+### サービス連携詳細
+
+**Cloudflare KV (キーバリューストア)**
+- バックエンドの`CACHE_KV`バインディング
+- Repository層でKVCacheHelperクラスによる透過的キャッシュ
+- TTL設定:
+  - 記事: 単体2時間、一覧1時間、ユーザー別30分
+  - カテゴリ: 24時間（更新頻度が低いため）
+  - ユーザー: 単体1時間、一覧30分
+- キャッシュ無効化: 作成/更新/削除時に自動
+
+**画像処理の3層キャッシュ戦略**
+1. **ブラウザキャッシュ**: Cache-Control (1年、immutable)
+2. **CDNエッジキャッシュ**: CDN-Cache-Control (1年)
+3. **Worker Cache API**: データセンターローカルキャッシュ
+
+**外部サービス統合**
+- **Clerk Auth**: JWT認証（RSA公開鍵検証）
+- **Cloudflare Services**: R2 (S3互換), KV, D1, Images API
 
 ## 技術スタック
 

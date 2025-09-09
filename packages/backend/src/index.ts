@@ -6,7 +6,6 @@ import { typeDefs } from "./schema";
 import { resolvers } from "./resolvers";
 import { verifyJWT, AuthError } from "./auth";
 import { Context, createContext } from "./context";
-import type { Env } from "./types";
 
 async function createGraphQLContext(
   request: Request,

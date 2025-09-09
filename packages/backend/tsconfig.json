@@ -3,7 +3,6 @@
     "target": "ES2021",
     "module": "ESNext",
     "lib": ["ES2021"],
-    "types": ["@cloudflare/workers-types"],
     "moduleResolution": "node",
     "outDir": "dist",
     "rootDir": "src",
@@ -16,6 +15,6 @@
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "worker-configuration.d.ts"],
   "exclude": ["node_modules", "dist", "scripts"]
 }

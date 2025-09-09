@@ -1,5 +1,4 @@
 import { createClerkClient } from "@clerk/backend";
-import type { Env } from "./types";
 
 export interface AuthUser {
   sub: string;
@@ -26,8 +25,10 @@ export async function verifyJWT(
       return null;
     }
 
+    const secretKey = await env.CLERK_SECRET_KEY.get();
+
     const clerk = createClerkClient({
-      secretKey: env.CLERK_SECRET_KEY,
+      secretKey,
       publishableKey: env.CLERK_PUBLISHABLE_KEY,
       jwtKey: env.CLERK_PEM_PUBLIC_KEY,
     });

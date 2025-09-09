@@ -24,6 +24,14 @@
     "binding": "IMAGES_API"
   },
 
+  "secrets_store_secrets": [
+    {
+      "binding": "CLERK_SECRET_KEY",
+      "store_id": "76c9dcdc4aad4ed9a50350b38cd2dd5c",
+      "secret_name": "CLERK_SECRET_KEY_DEV"
+    }
+  ],
+
   // Observability設定
   "observability": {
     "logs": {
@@ -61,7 +69,14 @@
       ],
       "images": {
         "binding": "IMAGES_API"
-      }
+      },
+      "secrets_store_secrets": [
+        {
+          "binding": "CLERK_SECRET_KEY",
+          "store_id": "76c9dcdc4aad4ed9a50350b38cd2dd5c",
+          "secret_name": "CLERK_SECRET_KEY_DEV"
+        }
+      ]
     },
 
     // 本番環境設定
@@ -76,8 +91,8 @@
       "vars": {
         "ENVIRONMENT": "production",
         "CORS_ORIGIN": "https://yu-f87ct9a.dev",
-        "CLERK_PEM_PUBLIC_KEY": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArmHdTw+M4xALbZn5roVl\nP8I9WYwkuHQMw/p4GoI9oIutoiNLd5+ICk/7gcgpeNbuLCZgjl1z+lbq9lJngUs7\nYAmBKgRS14fYvzXYxrgIXglqvqSpxMkcqA43sEhf+ABczUQXvpifief5dW8kcH1i\nYndMhmd+yO+0iHO15T2rx66uQ2wKSNDokpXFTmKEuPempCMIT/I4UO3FEfWwP8TT\nN4uBNfT9+bixtc4ITqxfHDiJGZjV3ExxMbUgs3FfUkqz5brPyk1MngzgDn+99+K9\n6l12PgjzzNpbeTn5G38Qw6gRWOqbQR5AaB/74q9d5xBTNY5S/5+Cf2tzTTZNrxz3\n3wIDAQAB\n-----END PUBLIC KEY-----",
-        "CLERK_PUBLISHABLE_KEY": "pk_test_bGlnaHQtYWtpdGEtNDcuY2xlcmsuYWNjb3VudHMuZGV2JA"
+        "CLERK_PEM_PUBLIC_KEY": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3j8iQk3wGVn+fWLEaZON\ngjkUeIdmpQe7QSKk7XMRXuFKw0FcB4yz9Pg8OlZFOPu+brWx0HkV4mU0YdxPX1n7\n8EAGr3SqrvJbiI03Mu1I2eR2wdbAS3DyMAqv8G4A/0KjZdJX2Gh3HP6u4slHRZDu\n+krCoUo1Hgvo1snJUCo1Kyx2GVsT6YvGyq2dMsWFZEoOAME47619QtxZOfu0+x+B\nHljo98TL60SsGJf5/Ss+RbEC2ZD6c1E60gbacg7pXNn9+n7dloo3Vq4VoDcUDjxd\nHol3YVDsWNkuzmq4l/bW7is0vuqzqmQAagGozT9ehzmC5PiHnW0edcSdBNj/vfSN\nkwIDAQAB\n-----END PUBLIC KEY-----",
+        "CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsueXUtZjg3Y3Q5YS5kZXYk"
       },
       "r2_buckets": [
         {
@@ -87,7 +102,14 @@
       ],
       "images": {
         "binding": "IMAGES_API"
-      }
+      },
+      "secrets_store_secrets": [
+        {
+          "binding": "CLERK_SECRET_KEY",
+          "store_id": "76c9dcdc4aad4ed9a50350b38cd2dd5c",
+          "secret_name": "CLERK_SECRET_KEY_PROD"
+        }
+      ]
     }
   }
 }

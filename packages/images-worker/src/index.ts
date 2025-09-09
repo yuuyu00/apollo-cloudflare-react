@@ -1,6 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
 import { verifyJWT } from "./auth";
-import type { Env } from "./types";
 
 const ALLOWED_FORMATS = ["image/jpeg", "image/jpg", "image/png"];
 const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB

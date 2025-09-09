@@ -7,7 +7,6 @@ import { ArticleService } from "./services/article";
 import { CategoryService } from "./services/category";
 import { UserService } from "./services/user";
 import { AuthUser } from "./auth";
-import { Env } from "./types";
 
 export function createContext(
   prisma: PrismaClient,
