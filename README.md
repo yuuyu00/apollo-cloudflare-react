@@ -449,3 +449,7 @@ pnpm build
 - [Clerk Authentication Documentation](https://clerk.com/docs)
 - [Catalyst UI Kit](https://catalyst.tailwindui.com/docs)
 - [Turborepo Documentation](https://turbo.build/repo/docs)
+
+## テスト
+
+Web版のClaude CodeからのPR作成テスト
